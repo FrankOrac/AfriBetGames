@@ -257,3 +257,15 @@
 - ✅ User interface: Perfect rendering with animations and dark mode support
 
 **The AfriBet Games application is fully migrated and ready for use!** 🎉
+
+## November 02, 2025 - Vercel Deployment Fix ✅
+
+[x] 71. Fix Vercel deployment configuration error
+    - Error: "If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present"
+    - Root cause: vercel.json contained both legacy `routes` property and modern `rewrites`/`headers` properties
+    - Solution: Removed legacy `routes` block entirely
+    - Converted routing to modern `rewrites` property:
+      * API routing: `/api/:path*` → `/api/index.ts`
+      * SPA fallback: `/(.*)` → `/index.html`
+    - Kept modern `headers` configuration as-is
+    - **Vercel deployment configuration now compliant with modern standards**
