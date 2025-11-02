@@ -270,7 +270,7 @@
     - Kept modern `headers` configuration as-is
     - **Vercel deployment configuration now compliant with modern standards**
 
-[x] 72. Fix API 500 errors on Vercel deployment
+[x] 72. Fix API 500 errors on Vercel deployment (Phase 1)
     - Error: "Failed to load resource: the server responded with a status of 500" when clicking games
     - Root cause: Serverless function lacked proper error handling and CORS configuration
     - Solutions implemented:
@@ -280,3 +280,14 @@
       * Added error logging for debugging in Vercel logs
       * Improved error responses with meaningful messages
     - **API serverless function now robust and production-ready**
+
+[x] 73. Enhanced debugging for Vercel 500 errors (Phase 2)
+    - Error persisted: GET /api/games/minor returning 500
+    - Added comprehensive debugging features:
+      * Imported storage module directly to ensure initialization
+      * Added storage verification on startup (logs number of games loaded)
+      * Added request logging middleware to track all incoming requests
+      * Added detailed error stack traces in development mode
+      * Added timestamp logging for all requests
+      * Ensured headers aren't sent twice to prevent crashes
+    - **Next step: Redeploy to Vercel and check function logs for detailed error information**
