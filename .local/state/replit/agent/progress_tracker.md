@@ -292,15 +292,21 @@
       * Ensured headers aren't sent twice to prevent crashes
     - **Next step: Redeploy to Vercel and check function logs for detailed error information**
 
-[x] 74. CRITICAL FIX: Resolved ERR_MODULE_NOT_FOUND error on Vercel
+[x] 74. CRITICAL FIX: Resolved ERR_MODULE_NOT_FOUND error on Vercel (FAILED - includeFiles didn't work)
     - **Root cause identified from logs**: `Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes'`
     - Problem: Vercel serverless function couldn't access server/ and shared/ directories
+    - First attempt: Added `includeFiles` configuration - **DIDN'T WORK**
+    - Error persisted after redeploy with same module not found error
+
+[x] 75. FINAL FIX: Bundle API with esbuild for Vercel deployment
+    - **Root cause**: Vercel needs compiled/bundled JavaScript, not raw TypeScript imports
     - **Solution implemented**:
-      * Added `functions` configuration in vercel.json
-      * Set `includeFiles: "{server/**,shared/**}"` for all api/*.ts files
-      * This ensures server/ and shared/ directories are bundled with the serverless function
-    - **Impact**: All API routes will now work because they can access:
-      * server/routes.ts (API route definitions)
-      * server/storage.ts (data storage)
-      * shared/schema.ts (TypeScript types and Zod schemas)
-    - **Next step: Redeploy to Vercel - the 500 errors should now be resolved!**
+      * Created new npm script: `build:api` that bundles api/index.ts with esbuild
+      * Updated vercel.json buildCommand to: `npm run build && npm run build:api`
+      * Changed API destination from `/api/index.ts` to `/api/index.js` (compiled output)
+      * esbuild bundles everything into single file (55.0kb):
+        - api/index.ts → api/index.js (includes all dependencies)
+        - Includes server/routes.ts, server/storage.ts, shared/schema.ts
+        - All imports resolved at build time
+    - **Build verified successfully**: ✅ api/index.js created (55.0kb)
+    - **Next step: Redeploy to Vercel - the bundled API should now work!** 🚀

@@ -1,0 +1,224 @@
+"TimeUTC","timestampInMs","requestPath","requestMethod","requestQueryString","responseStatusCode","requestId","requestUserAgent","level","environment","branch","vercelCache","type","function","host","deploymentDomain","deploymentId","durationMs","region","maxMemoryUsed","memorySize","message","projectId","traceId","sessionId","invocationId","instanceId","concurrency"
+"2025-11-02 05:44:01",1762062241761,"afri-bet-games.vercel.app/api/games/night","GET","",-1,"n86vj-1762062241497-3ef049840398","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HG3TN39FSS3J3Z1B0FBKG","",-1
+"2025-11-02 05:44:01",1762062241621,"afri-bet-games.vercel.app/api/games/night","GET","",500,"n86vj-1762062241497-3ef049840398","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",128,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HG3TN39FSS3J3Z1B0FBKG","",1
+"2025-11-02 05:43:42",1762062222211,"afri-bet-games.vercel.app/api/games","GET","",-1,"bllfl-1762062221939-e8a160230e75","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HFGQGJMTHS6ZMWEBCKZ0V","",-1
+"2025-11-02 05:43:42",1762062222184,"afri-bet-games.vercel.app/api/results","GET","",-1,"rbklx-1762062221938-72f7aab1920e","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HFGQ9B81R85KCSKVPC5EB","",-1
+"2025-11-02 05:43:42",1762062222064,"afri-bet-games.vercel.app/api/games","GET","",500,"bllfl-1762062221939-e8a160230e75","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",131,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HFGQGJMTHS6ZMWEBCKZ0V","",1
+"2025-11-02 05:43:42",1762062222057,"afri-bet-games.vercel.app/api/results","GET","",500,"rbklx-1762062221938-72f7aab1920e","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",113,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HFGQ9B81R85KCSKVPC5EB","",1
+"2025-11-02 05:43:39",1762062219084,"afri-bet-games.vercel.app/api/forum/posts","GET","gameType=main",-1,"m2npz-1762062218842-b506287dbdf8","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HFDPDHCJGWM3ZNFDY84F4","",-1
+"2025-11-02 05:43:38",1762062218957,"afri-bet-games.vercel.app/api/forum/posts","GET","gameType=main",500,"m2npz-1762062218842-b506287dbdf8","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",112,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HFDPDHCJGWM3ZNFDY84F4","",1
+"2025-11-02 05:43:37",1762062217901,"afri-bet-games.vercel.app/api/forum/posts","GET","gameType=lucky_numbers",-1,"2rc28-1762062217655-b8421b00ef8a","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HFCHFJP5TS75W9MQKZHK3","",-1
+"2025-11-02 05:43:37",1762062217775,"afri-bet-games.vercel.app/api/forum/posts","GET","gameType=lucky_numbers",500,"2rc28-1762062217655-b8421b00ef8a","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",110,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HFCHFJP5TS75W9MQKZHK3","",1
+"2025-11-02 05:43:36",1762062216565,"afri-bet-games.vercel.app/api/forum/posts","GET","gameType=aviator",-1,"jp8mm-1762062216311-197860298448","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HFB7J27PYANCGNR52JAXF","",-1
+"2025-11-02 05:43:36",1762062216433,"afri-bet-games.vercel.app/api/forum/posts","GET","gameType=aviator",500,"jp8mm-1762062216311-197860298448","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",115,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HFB7J27PYANCGNR52JAXF","",1
+"2025-11-02 05:43:25",1762062205137,"afri-bet-games.vercel.app/api/forum/posts","GET","gameType=virtual",-1,"n86vj-1762062204886-c4c99ad1b150","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HF02FGH5G7ACCEHCMPGBA","",-1
+"2025-11-02 05:43:25",1762062205007,"afri-bet-games.vercel.app/api/forum/posts","GET","gameType=virtual",500,"n86vj-1762062204886-c4c99ad1b150","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",114,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HF02FGH5G7ACCEHCMPGBA","",1
+"2025-11-02 05:43:21",1762062201887,"afri-bet-games.vercel.app/api/games/aviator","GET","",-1,"jp8mm-1762062201617-51f8c2fff450","Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HEWWE3112P4V8C942MMMF","",-1
+"2025-11-02 05:43:21",1762062201742,"afri-bet-games.vercel.app/api/games/aviator","GET","",500,"jp8mm-1762062201617-51f8c2fff450","Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",127,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HEWWE3112P4V8C942MMMF","",1
+"2025-11-02 05:43:21",1762062201299,"afri-bet-games.vercel.app/api/forum/posts","GET","",-1,"pmtsb-1762062201037-11a8b61d75ed","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HEWA3HPRFW0NEDSJS6ZMQ","",-1
+"2025-11-02 05:43:21",1762062201155,"afri-bet-games.vercel.app/api/forum/posts","GET","",500,"pmtsb-1762062201037-11a8b61d75ed","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",129,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HEWA3HPRFW0NEDSJS6ZMQ","",1
+"2025-11-02 05:43:12",1762062192671,"afri-bet-games.vercel.app/api/games/minor","GET","",-1,"m2npz-1762062192406-70e3b0074c86","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HEKWC092A4MMET9FE3M2K","",-1
+"2025-11-02 05:43:12",1762062192524,"afri-bet-games.vercel.app/api/games/minor","GET","",500,"m2npz-1762062192406-70e3b0074c86","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",131,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HEKWC092A4MMET9FE3M2K","",1
+"2025-11-02 05:42:44",1762062164099,"afri-bet-games.vercel.app/api/bets","GET","",-1,"rbklx-1762062163196-676a56bf23e2","Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HDQMNBVQQXXZCQGVMDWJJ","",-1
+"2025-11-02 05:42:43",1762062163845,"afri-bet-games.vercel.app/api/games","GET","",-1,"pmtsb-1762062163197-20ad620f3aa8","Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HDQMEWM1N4PGS5EP7Y3P7","",-1
+"2025-11-02 05:42:43",1762062163726,"afri-bet-games.vercel.app/api/winnings","GET","",-1,"4295h-1762062163196-739b8b274bc5","Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",-1,"iad1",-1,-1,"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js
+    at finalizeResolution (node:internal/modules/esm/resolve:280:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at moduleResolveWithNodePath (node:internal/modules/esm/resolve:989:14)
+    at defaultResolve (node:internal/modules/esm/resolve:1032:79)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:783:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:707:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:690:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:307:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/task/server/routes'
+}
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue.","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HDQM3DFYT2JA29WDSV3D8","",-1
+"2025-11-02 05:42:43",1762062163605,"afri-bet-games.vercel.app/api/bets","GET","",500,"rbklx-1762062163196-676a56bf23e2","Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",142,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HDQMNBVQQXXZCQGVMDWJJ","",1
+"2025-11-02 05:42:43",1762062163597,"afri-bet-games.vercel.app/api/games","GET","",500,"pmtsb-1762062163197-20ad620f3aa8","Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",112,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HDQMEWM1N4PGS5EP7Y3P7","",1
+"2025-11-02 05:42:43",1762062163587,"afri-bet-games.vercel.app/api/winnings","GET","",500,"4295h-1762062163196-739b8b274bc5","Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36","error","production","master","","lambda","/api/index","afri-bet-games.vercel.app","afri-bet-games.vercel.app","dpl_BoJiaNC632CGB4MrxvWMTYdN6V1c",117,"iad1",78,2048,"","prj_50QHEn327fufPRopFICARpwv4QUX","","","01K91HDQM3DFYT2JA29WDSV3D8","",1
