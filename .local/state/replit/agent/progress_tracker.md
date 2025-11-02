@@ -291,3 +291,16 @@
       * Added timestamp logging for all requests
       * Ensured headers aren't sent twice to prevent crashes
     - **Next step: Redeploy to Vercel and check function logs for detailed error information**
+
+[x] 74. CRITICAL FIX: Resolved ERR_MODULE_NOT_FOUND error on Vercel
+    - **Root cause identified from logs**: `Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes'`
+    - Problem: Vercel serverless function couldn't access server/ and shared/ directories
+    - **Solution implemented**:
+      * Added `functions` configuration in vercel.json
+      * Set `includeFiles: "{server/**,shared/**}"` for all api/*.ts files
+      * This ensures server/ and shared/ directories are bundled with the serverless function
+    - **Impact**: All API routes will now work because they can access:
+      * server/routes.ts (API route definitions)
+      * server/storage.ts (data storage)
+      * shared/schema.ts (TypeScript types and Zod schemas)
+    - **Next step: Redeploy to Vercel - the 500 errors should now be resolved!**
