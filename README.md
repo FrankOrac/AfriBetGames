@@ -171,27 +171,48 @@ Navigate to `http://localhost:5000`
 
 The application will automatically reload when you make changes to the code.
 
-### Windows Setup (One-Click Installation)
+### VS Code Setup (Recommended for Developers)
 
-For Windows users, we've created easy-to-use scripts:
+**Perfect for Windows, Mac, and Linux!**
 
-1. **First Time Setup**
-   - Double-click `setup-windows.bat`
-   - Wait for dependencies to install
-   - You'll see "Setup completed successfully!"
+1. **Open project in VS Code**
+   ```bash
+   code .
+   ```
 
-2. **Start the Application**
-   - Double-click `start-windows.bat`
-   - Browser will open at `http://localhost:5000`
+2. **Open terminal in VS Code** (`` Ctrl+` ``)
 
-3. **Troubleshooting**
-   - See `WINDOWS-SETUP.md` for detailed instructions
-   - Includes solutions for common Windows issues
+3. **First time setup**
+   ```bash
+   npm run setup
+   ```
 
-**Requirements for Windows:**
+4. **Start development server**
+   ```bash
+   npm run start:dev
+   ```
+
+5. **Open browser**
+   - Go to `http://localhost:5000`
+
+**See `VSCODE-SETUP.md` for:**
+- Complete VS Code integration guide
+- Debugging configuration
+- Recommended extensions
+- Keyboard shortcuts
+- Troubleshooting tips
+
+### Windows Quick Start (.bat scripts)
+
+For non-developers who prefer double-click scripts:
+
+1. **First Time Setup**: Double-click `setup-windows.bat`
+2. **Start App**: Double-click `start-windows.bat`
+3. **Details**: See `WINDOWS-SETUP.md`
+
+**Requirements:**
 - Windows 10 or higher
 - Node.js 18+ (download from [nodejs.org](https://nodejs.org/))
-- No additional configuration needed!
 
 ### Build for Production
 
