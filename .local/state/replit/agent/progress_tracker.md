@@ -310,3 +310,13 @@
         - All imports resolved at build time
     - **Build verified successfully**: ✅ api/index.js created (55.0kb)
     - **Next step: Redeploy to Vercel - the bundled API should now work!** 🚀
+
+[x] 76. Fix Vercel file conflict error
+    - **Error**: "Two or more files have conflicting paths or names... api/index.js has conflicts with api/index.ts"
+    - **Root cause**: Both source (index.ts) and compiled (index.js) files were in repository
+    - **Solution**:
+      * Added `api/index.js` to .gitignore
+      * Removed existing api/index.js from repository
+      * Now Vercel will build it fresh during deployment
+    - **Result**: Only source file (index.ts) in repo, compiled file generated during build
+    - **Status**: Ready for deployment! ✅
