@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from '@/components/ui/button';
 import { Printer, Download, FileText } from 'lucide-react';
 import QRCode from 'qrcode';
+import { getNextDrawDate, formatDrawDate, getDrawSchedule } from '@/lib/drawDates';
 
 interface PrintTicketProps {
   betId: string;
@@ -471,6 +472,20 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
                 <div className="divider"></div>
                 <div className="status-box pending">
                   AWAITING RESULTS
+                </div>
+                <div className="section">
+                  <div className="row">
+                    <span className="label">Draw Schedule:</span>
+                    <span className="value" style={{ fontSize: '10px' }}>
+                      {getDrawSchedule(ticket.gameType)}
+                    </span>
+                  </div>
+                  <div className="row">
+                    <span className="label">Expected Draw:</span>
+                    <span className="value" style={{ fontSize: '9px' }}>
+                      {formatDrawDate(getNextDrawDate(ticket.gameType))}
+                    </span>
+                  </div>
                 </div>
                 <div className="important-text" style={{ fontSize: '9px', marginTop: '4px' }}>
                   KEEP THIS SLIP SAFE

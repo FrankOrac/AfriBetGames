@@ -10,17 +10,23 @@ AfriBet Games and Entertainment is an innovative online/offline gaming platform 
 
 ## ✨ Key Features
 
-### 🎫 Professional Colorful Ticket System
-- **Dual Ticket Types**: Separate betting slips and results tickets
+### 🎫 Professional Betting Ticket System
+- **Dual Ticket Types**: Separate betting slips (pending) and results tickets (completed)
+- **Instant Generation**: Print betting slip immediately after placing bet
+- **Expected Draw Dates**: Shows next draw date and schedule for pending tickets
 - **Beautiful Gradient Design**: Colorful, attractive tickets with modern gradients
-- **Premium Visual Experience**: Professional design with rounded corners and shadows
-- **QR Code Verification**: Secure ticket authentication with gradient borders
-- **Authentic Badge**: Gold gradient badge confirming ticket authenticity
+- **QR Code Verification**: Secure ticket authentication for anti-fraud
+- **Authentic Badge**: Official badge confirming ticket authenticity
+- **Potential Winnings Display**: Shows maximum potential payout on betting slips
+- **Draw Schedule Information**: Displays game-specific draw times
+  * Virtual: Every Sunday at 6:00 PM
+  * Noon Game: Daily at 12:00 PM
+  * Night Game: Daily at 12:00 AM (Midnight)
+  * Main Games (Minor/Major/Mega): Daily at 8:00 PM
 - **Color-Coded Numbers**: Green gradients for matched numbers, gold for bonus
-- **Instant Printing**: Print betting slip immediately after placing bet
-- **Results Ticket**: Separate ticket showing winning numbers and payouts with vibrant colors
+- **Results Ticket**: Shows actual winning numbers and payouts after draw
 - **Short Code System**: 8-character codes for easy verification
-- **Portable Design**: Optimized for mobile viewing and printing
+- **Portable Design**: Optimized for 80mm thermal printer format
 
 ### 🌍 Multi-Country Support
 - 18+ African countries supported
