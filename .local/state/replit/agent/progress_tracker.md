@@ -302,6 +302,20 @@
 
 **🎉 AfriBet Games is fully migrated, verified, and ready for development!**
 
+## November 03, 2025 - Vercel API Bundling Fix ✅
+
+[x] 81. Fix ERR_MODULE_NOT_FOUND error on Vercel deployment
+    - **Error**: `Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js`
+    - **Root cause**: esbuild was using `--packages=external` which kept internal imports as separate modules
+    - **Solution**: Updated build:api script to bundle internal code while keeping only npm packages external
+    - Changed from: `--packages=external` (bundles nothing)
+    - Changed to: `--bundle --external:express --external:@vercel/node --external:drizzle-orm --external:@neondatabase/serverless --external:zod --external:drizzle-zod --external:qrcode`
+    - Now bundles all internal code (server/routes, server/storage, shared/schema) into single 55KB file
+    - Only external npm packages remain as imports (Vercel provides these)
+    - Build verified successfully: api/index.js created (55.0kb)
+    - File removed from repository (in .gitignore, built during deployment)
+    - **Status**: Ready for Vercel deployment! 🚀
+
 ## November 02, 2025 - Vercel Deployment Fix ✅
 
 [x] 71. Fix Vercel deployment configuration error
