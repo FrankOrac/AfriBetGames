@@ -171,6 +171,28 @@ Navigate to `http://localhost:5000`
 
 The application will automatically reload when you make changes to the code.
 
+### Windows Setup (One-Click Installation)
+
+For Windows users, we've created easy-to-use scripts:
+
+1. **First Time Setup**
+   - Double-click `setup-windows.bat`
+   - Wait for dependencies to install
+   - You'll see "Setup completed successfully!"
+
+2. **Start the Application**
+   - Double-click `start-windows.bat`
+   - Browser will open at `http://localhost:5000`
+
+3. **Troubleshooting**
+   - See `WINDOWS-SETUP.md` for detailed instructions
+   - Includes solutions for common Windows issues
+
+**Requirements for Windows:**
+- Windows 10 or higher
+- Node.js 18+ (download from [nodejs.org](https://nodejs.org/))
+- No additional configuration needed!
+
 ### Build for Production
 
 ```bash
