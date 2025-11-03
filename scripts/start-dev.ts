@@ -38,13 +38,10 @@ function startServer() {
   
   log('Press Ctrl+C to stop the server\n', colors.yellow);
 
-  // Set environment variable and start the dev server
-  const env = { ...process.env, NODE_ENV: 'development' };
-  
+  // Use npm run dev which handles cross-platform env vars via cross-env
   const devProcess = spawn('npm', ['run', 'dev'], {
     stdio: 'inherit',
     shell: true,
-    env,
   });
 
   devProcess.on('error', (error) => {

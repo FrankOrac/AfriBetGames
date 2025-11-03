@@ -8,6 +8,8 @@ This guide shows you how to run AfriBet Games directly from VS Code using TypeSc
 2. **VS Code** - [Download here](https://code.visualstudio.com/)
 3. **Git** (optional) - For cloning the repository
 
+**Note:** The project uses `cross-env` for Windows compatibility, which is automatically installed during setup.
+
 ## Quick Start in VS Code
 
 ### 1. Open Project in VS Code

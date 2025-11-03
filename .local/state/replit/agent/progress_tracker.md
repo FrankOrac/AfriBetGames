@@ -358,6 +358,19 @@
       * Development tips and tricks
     - **Status**: Works perfectly in VS Code on all platforms! 🖥️
 
+[x] 84. Fix Windows NODE_ENV compatibility issue
+    - **Error**: `'NODE_ENV' is not recognized as an internal or external command`
+    - **Root cause**: Windows doesn't support Unix-style inline environment variables
+    - **Solution**: Installed `cross-env` package for cross-platform env var support
+    - Updated package.json scripts:
+      * Changed `NODE_ENV=development` to `cross-env NODE_ENV=development`
+      * Updated both `dev` and `start` scripts
+    - Updated `scripts/start-dev.ts`:
+      * Removed manual environment variable setting
+      * Now relies on cross-env in npm script
+    - **Result**: Scripts now work on Windows, Mac, and Linux! ✅
+    - **Status**: Windows compatibility fully fixed! 🪟
+
 ## November 02, 2025 - Vercel Deployment Fix ✅
 
 [x] 71. Fix Vercel deployment configuration error

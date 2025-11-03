@@ -89,6 +89,14 @@ If you see this error, run:
 npm install
 ```
 
+### "NODE_ENV is not recognized" Error
+
+This is automatically fixed! The project now uses `cross-env` to handle Windows environment variables. If you see this error:
+
+1. Make sure you ran `setup-windows.bat` or `npm install`
+2. The `cross-env` package should be installed automatically
+3. Try running `npm install cross-env` if the issue persists
+
 ### Application Won't Start
 
 1. Delete `node_modules` folder
