@@ -283,8 +283,8 @@ AfriBet Games and Entertainment aims to give full-time entertainment and rewards
 - Create job opportunities, reducing poverty rates
 
 ### Founders
-- **Frank Osakwe Aghedo** - Co-Founder
-- **Ifeadi Andrew Norbert** - Co-Founder
+- **Frank** - Co-Founder
+- **Andrew** - Co-Founder
 
 ### Contact Information
 - **Office:** Pan-African Headquarters - Multiple locations across Africa
