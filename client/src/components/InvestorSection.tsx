@@ -9,8 +9,6 @@ import {
   Globe,
   Briefcase,
 } from "lucide-react";
-import frankImage from "@assets/generated_images/frank-osakwe.webp";
-import ifeadiImage from "@assets/generated_images/ifeadi-andrew.webp";
 import ContactModal from "./ContactModal";
 
 export default function InvestorSection() {
@@ -57,77 +55,39 @@ export default function InvestorSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-          <div className="space-y-6">
-            <Card className="p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <Target className="w-8 h-8 text-primary" />
-                <h3 className="font-display font-semibold text-2xl">
-                  Our Vision
-                </h3>
-              </div>
-              <p className="text-muted-foreground leading-relaxed">
-                AfriBet Games and Entertainment is a gaming industry situated
-                across Africa, aimed at giving full-time entertainment and
-                reward for gaming and betting to our customers in Africa. We're
-                looking at raising the passion of our customers to get paid
-                while having fun.
-              </p>
-            </Card>
-
-            <Card className="p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <Briefcase className="w-8 h-8 text-primary" />
-                <h3 className="font-display font-semibold text-2xl">
-                  Our Mission
-                </h3>
-              </div>
-              <p className="text-muted-foreground leading-relaxed">
-                To hit 200 branches/offices in the first twelve (12) months as
-                well as introducing new gaming facilities to give our customers
-                a better entertainment experience. Also to technically help
-                startups around the community thrive in an enabling environment
-                and build a conducive environment for learning of new
-                technology.
-              </p>
-            </Card>
-          </div>
-
-          <div className="space-y-6">
-            <Card className="p-8">
-              <h3 className="font-display font-semibold text-2xl mb-6">
-                Meet the Founders
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-16">
+          <Card className="p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Target className="w-8 h-8 text-primary" />
+              <h3 className="font-display font-semibold text-2xl">
+                Our Vision
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="text-center">
-                  <div className="mb-4 overflow-hidden rounded-lg shadow-lg">
-                    <img
-                      src={frankImage}
-                      alt="Frank Osakwe Aghedo"
-                      className="w-full h-64 object-cover object-center"
-                    />
-                  </div>
-                  <p className="font-semibold text-lg">Frank</p>
-                  <p className="text-muted-foreground text-sm">
-                    Co-Founder & CEO
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="mb-4 overflow-hidden rounded-lg shadow-lg">
-                    <img
-                      src={ifeadiImage}
-                      alt="Ifeadi Andrew Norbert"
-                      className="w-full h-64 object-cover object-center"
-                    />
-                  </div>
-                  <p className="font-semibold text-lg">Andrew</p>
-                  <p className="text-muted-foreground text-sm">
-                    Co-Founder & CTO
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </div>
+            </div>
+            <p className="text-muted-foreground leading-relaxed">
+              AfriBet Games and Entertainment is a gaming industry situated
+              across Africa, aimed at giving full-time entertainment and
+              reward for gaming and betting to our customers in Africa. We're
+              looking at raising the passion of our customers to get paid
+              while having fun.
+            </p>
+          </Card>
+
+          <Card className="p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Briefcase className="w-8 h-8 text-primary" />
+              <h3 className="font-display font-semibold text-2xl">
+                Our Mission
+              </h3>
+            </div>
+            <p className="text-muted-foreground leading-relaxed">
+              To hit 200 branches/offices in the first twelve (12) months as
+              well as introducing new gaming facilities to give our customers
+              a better entertainment experience. Also to technically help
+              startups around the community thrive in an enabling environment
+              and build a conducive environment for learning of new
+              technology.
+            </p>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
