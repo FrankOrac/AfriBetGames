@@ -32,7 +32,7 @@ function corsMiddleware(): RequestHandler {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Admin-Key,X-Request-Id");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Admin-Key,X-Admin-Actor,X-Request-Id");
     res.setHeader("Access-Control-Allow-Credentials", "true");
 
     if (req.method === "OPTIONS") {
@@ -79,7 +79,7 @@ export async function createApplication() {
     legacyHeaders: false,
     message: { error: "Too many requests; please try again later" },
   }));
-  app.use(["/api/bets", "/api/winnings", "/api/contact"], (_req, res, next) => {
+  app.use(["/api/bets", "/api/winnings", "/api/contact", "/api/admin"], (_req, res, next) => {
     res.setHeader("Cache-Control", "no-store, private");
     next();
   });

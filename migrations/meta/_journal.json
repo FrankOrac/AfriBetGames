@@ -15,6 +15,13 @@
       "when": 1793724025511,
       "tag": "0001_absurd_carmella_unuscione",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793759387109,
+      "tag": "0002_milky_namorita",
+      "breakpoints": true
     }
   ]
 }

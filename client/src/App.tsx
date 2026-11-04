@@ -17,6 +17,7 @@ const NightGame = lazy(() => import("@/pages/NightGame"));
 const VirtualBetting = lazy(() => import("@/pages/VirtualBetting"));
 const Results = lazy(() => import("@/pages/Results"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 const Forum = lazy(() => import("@/pages/Forum"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/play/:gameType" component={PlayGame} />
       <Route path="/results" component={Results} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route path="/forum" component={Forum} />
       <Route component={NotFound} />
     </Switch>

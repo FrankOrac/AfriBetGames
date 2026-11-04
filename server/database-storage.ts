@@ -11,6 +11,9 @@ import {
   games,
   results,
   winnings,
+  platformSettings,
+  complianceGates,
+  operatorAuditLogs,
   type AviatorSession,
   type Bet,
   type ContactInquiry,
@@ -29,8 +32,15 @@ import {
   type NewBet,
   type Result,
   type Winning,
+  type PlatformSettings,
+  type InsertPlatformSettings,
+  type ComplianceGate,
+  type InsertComplianceGate,
+  type OperatorAuditLog,
+  type InsertOperatorAuditLog,
 } from "@shared/schema";
 import { GAME_CATALOG } from "./game-catalog";
+import { initialComplianceGates, initialPlatformSettings, PLATFORM_SETTINGS_ID } from "./control-plane";
 import type { IStorage } from "./storage";
 
 const MAX_LIST_ROWS = 500;
@@ -38,6 +48,7 @@ const MAX_LIST_ROWS = 500;
 export class DatabaseStorage implements IStorage {
   private readonly db: NeonHttpDatabase;
   private catalogReady: Promise<void> | undefined;
+  private controlPlaneReady: Promise<void> | undefined;
 
   constructor(connectionString: string) {
     this.db = drizzle(neon(connectionString));
@@ -56,6 +67,19 @@ export class DatabaseStorage implements IStorage {
         });
     }
     return this.catalogReady;
+  }
+
+  private ensureControlPlane(): Promise<void> {
+    if (!this.controlPlaneReady) {
+      this.controlPlaneReady = Promise.all([
+        this.db.insert(platformSettings).values(initialPlatformSettings()).onConflictDoNothing({ target: platformSettings.id }),
+        this.db.insert(complianceGates).values(initialComplianceGates()).onConflictDoNothing({ target: complianceGates.key }),
+      ]).then(() => undefined).catch((error) => {
+        this.controlPlaneReady = undefined;
+        throw error;
+      });
+    }
+    return this.controlPlaneReady;
   }
 
   async getGame(id: string): Promise<Game | undefined> {
@@ -318,5 +342,45 @@ export class DatabaseStorage implements IStorage {
       type: inquiry.type ?? "general",
       status: "new",
     }).returning())[0];
+  }
+
+  async getPlatformSettings(): Promise<PlatformSettings> {
+    await this.ensureControlPlane();
+    return (await this.db.select().from(platformSettings).where(eq(platformSettings.id, PLATFORM_SETTINGS_ID)).limit(1))[0];
+  }
+
+  async updatePlatformSettings(update: Partial<InsertPlatformSettings>): Promise<PlatformSettings> {
+    await this.ensureControlPlane();
+    const { id: _id, ...allowed } = update;
+    return (await this.db
+      .update(platformSettings)
+      .set({ ...allowed, updatedAt: new Date() })
+      .where(eq(platformSettings.id, PLATFORM_SETTINGS_ID))
+      .returning())[0];
+  }
+
+  async getComplianceGates(): Promise<ComplianceGate[]> {
+    await this.ensureControlPlane();
+    return this.db.select().from(complianceGates).orderBy(complianceGates.category, complianceGates.label);
+  }
+
+  async updateComplianceGate(key: string, update: Partial<InsertComplianceGate>): Promise<ComplianceGate | undefined> {
+    await this.ensureControlPlane();
+    const { key: _key, ...allowed } = update;
+    return (await this.db
+      .update(complianceGates)
+      .set({ ...allowed, updatedAt: new Date() })
+      .where(eq(complianceGates.key, key))
+      .returning())[0];
+  }
+
+  async getOperatorAuditLogs(): Promise<OperatorAuditLog[]> {
+    await this.ensureControlPlane();
+    return this.db.select().from(operatorAuditLogs).orderBy(desc(operatorAuditLogs.createdAt)).limit(100);
+  }
+
+  async createOperatorAuditLog(log: InsertOperatorAuditLog): Promise<OperatorAuditLog> {
+    await this.ensureControlPlane();
+    return (await this.db.insert(operatorAuditLogs).values(log).returning())[0];
   }
 }

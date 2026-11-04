@@ -17,10 +17,17 @@ import {
   type InsertForumComment,
   type ContactInquiry,
   type InsertContactInquiry,
+  type PlatformSettings,
+  type InsertPlatformSettings,
+  type ComplianceGate,
+  type InsertComplianceGate,
+  type OperatorAuditLog,
+  type InsertOperatorAuditLog,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { GAME_CATALOG } from "./game-catalog";
 import { DatabaseStorage } from "./database-storage";
+import { initialComplianceGates, initialPlatformSettings, PLATFORM_SETTINGS_ID } from "./control-plane";
 
 export interface IStorage {
   getGame(id: string): Promise<Game | undefined>;
@@ -68,6 +75,13 @@ export interface IStorage {
   getContactInquiry(id: string): Promise<ContactInquiry | undefined>;
   getAllContactInquiries(): Promise<ContactInquiry[]>;
   createContactInquiry(inquiry: InsertContactInquiry): Promise<ContactInquiry>;
+
+  getPlatformSettings(): Promise<PlatformSettings>;
+  updatePlatformSettings(settings: Partial<InsertPlatformSettings>): Promise<PlatformSettings>;
+  getComplianceGates(): Promise<ComplianceGate[]>;
+  updateComplianceGate(key: string, gate: Partial<InsertComplianceGate>): Promise<ComplianceGate | undefined>;
+  getOperatorAuditLogs(): Promise<OperatorAuditLog[]>;
+  createOperatorAuditLog(log: InsertOperatorAuditLog): Promise<OperatorAuditLog>;
 }
 
 export class MemStorage implements IStorage {
@@ -80,6 +94,9 @@ export class MemStorage implements IStorage {
   private forumPosts: Map<string, ForumPost>;
   private forumComments: Map<string, ForumComment>;
   private contactInquiries: Map<string, ContactInquiry>;
+  private platformSettings: PlatformSettings;
+  private complianceGates: Map<string, ComplianceGate>;
+  private operatorAuditLogs: OperatorAuditLog[];
 
   constructor() {
     this.games = new Map();
@@ -91,6 +108,9 @@ export class MemStorage implements IStorage {
     this.forumPosts = new Map();
     this.forumComments = new Map();
     this.contactInquiries = new Map();
+    this.platformSettings = initialPlatformSettings() as PlatformSettings;
+    this.complianceGates = new Map(initialComplianceGates().map((gate) => [gate.key, gate as ComplianceGate]));
+    this.operatorAuditLogs = [];
     
     this.seedGames();
   }
@@ -643,6 +663,42 @@ export class MemStorage implements IStorage {
     };
     this.contactInquiries.set(id, inquiry);
     return inquiry;
+  }
+
+  async getPlatformSettings(): Promise<PlatformSettings> {
+    return { ...this.platformSettings };
+  }
+
+  async updatePlatformSettings(update: Partial<InsertPlatformSettings>): Promise<PlatformSettings> {
+    this.platformSettings = {
+      ...this.platformSettings,
+      ...update,
+      id: PLATFORM_SETTINGS_ID,
+      updatedAt: new Date(),
+    };
+    return { ...this.platformSettings };
+  }
+
+  async getComplianceGates(): Promise<ComplianceGate[]> {
+    return Array.from(this.complianceGates.values()).sort((a, b) => a.category.localeCompare(b.category));
+  }
+
+  async updateComplianceGate(key: string, update: Partial<InsertComplianceGate>): Promise<ComplianceGate | undefined> {
+    const gate = this.complianceGates.get(key);
+    if (!gate) return undefined;
+    const updated = { ...gate, ...update, key, updatedAt: new Date() };
+    this.complianceGates.set(key, updated);
+    return updated;
+  }
+
+  async getOperatorAuditLogs(): Promise<OperatorAuditLog[]> {
+    return this.operatorAuditLogs.slice(0, 100);
+  }
+
+  async createOperatorAuditLog(log: InsertOperatorAuditLog): Promise<OperatorAuditLog> {
+    const entry: OperatorAuditLog = { id: randomUUID(), ...log, createdAt: new Date() };
+    this.operatorAuditLogs.unshift(entry);
+    return entry;
   }
 }
 

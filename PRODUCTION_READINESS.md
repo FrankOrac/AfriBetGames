@@ -43,6 +43,13 @@ Do not set `BETTING_ENABLED=true` until the accountable owners sign off every ap
 
 Protected routes accept `Authorization: Bearer <ADMIN_API_KEY>` or `X-Admin-Key`. Protected operations include result publication/generation, configuration, aggregate bets/winnings, inquiries, statistics, code creation, and Aviator lifecycle operations. Prefer a private operator service rather than exposing these routes through a public browser.
 
+The protected `/admin` control centre uses the same credential and keeps it in
+browser `sessionStorage` only. It provides audited feature switches, compliance
+evidence/status tracking, risk limits, verified result publication, promotion
+codes, operational metrics, inquiries, and an operator audit trail. Runtime
+changes require PostgreSQL and are rejected while `PUBLIC_PREVIEW_MODE=true`.
+Bet placement cannot become active until every launch gate is complete.
+
 ## Data model notes
 
 - Money is stored as PostgreSQL `numeric(14,2)` rather than floating-point `real`.
@@ -55,7 +62,6 @@ Protected routes accept `Authorization: Bearer <ADMIN_API_KEY>` or `X-Admin-Key`
 ## Known engineering follow-ups
 
 - Replace client-triggered settlement checks with a transactional server-side settlement job when the production draw service is selected.
-- Move risk limits/configuration from process memory/environment variables to an audited, versioned operator configuration store.
 - Add authenticated player ownership before exposing account-level histories across devices.
 - Add integration tests against an ephemeral PostgreSQL instance and end-to-end tests for critical player/operator journeys.
 - Remove legacy, unused demo pages once product routing is finalized.

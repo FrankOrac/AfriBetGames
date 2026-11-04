@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,13 +14,14 @@ type Capabilities = {
 };
 
 export default function AgeGate() {
+  const [location] = useLocation();
   const { data } = useQuery<Capabilities>({ queryKey: ["/api/capabilities"] });
   const [open, setOpen] = useState(() => localStorage.getItem(STORAGE_KEY) !== "true");
   const [confirmed, setConfirmed] = useState(false);
 
   // The public preview is read-only, so it must remain freely explorable.
   // Show this acknowledgement only when the server explicitly enables bets.
-  if (data?.bettingEnabled !== true) return null;
+  if (location === "/admin" || data?.bettingEnabled !== true) return null;
 
   function continueToSite() {
     if (!confirmed) return;

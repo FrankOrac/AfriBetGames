@@ -294,12 +294,178 @@ var insertContactInquirySchema = z.object({
   message: z.string().trim().min(10).max(5e3),
   type: z.enum(["general", "investor"]).default("general")
 }).strict();
+var platformSettings = pgTable("platform_settings", {
+  id: text("id").primaryKey(),
+  bettingEnabled: boolean("betting_enabled").notNull().default(false),
+  communityPostingEnabled: boolean("community_posting_enabled").notNull().default(false),
+  contactSubmissionsEnabled: boolean("contact_submissions_enabled").notNull().default(false),
+  maintenanceMode: boolean("maintenance_mode").notNull().default(false),
+  houseEdgePercentage: numeric("house_edge_percentage", { precision: 5, scale: 2, mode: "number" }).notNull().default(15),
+  maxDailyPayoutRatio: numeric("max_daily_payout_ratio", { precision: 5, scale: 4, mode: "number" }).notNull().default(0.75),
+  maxSingleWinMultiplier: numeric("max_single_win_multiplier", { precision: 12, scale: 2, mode: "number" }).notNull().default(1e3),
+  updatedBy: text("updated_by").notNull().default("system"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+var insertPlatformSettingsSchema = createInsertSchema(platformSettings);
+var complianceGates = pgTable("compliance_gates", {
+  key: text("key").primaryKey(),
+  category: text("category").notNull(),
+  label: text("label").notNull(),
+  description: text("description").notNull(),
+  status: text("status").notNull().default("pending"),
+  evidence: text("evidence"),
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+var insertComplianceGateSchema = createInsertSchema(complianceGates);
+var operatorAuditLogs = pgTable("operator_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actor: text("actor").notNull(),
+  action: text("action").notNull(),
+  target: text("target").notNull(),
+  details: text("details").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+}, (table) => [
+  index("operator_audit_logs_created_at_idx").on(table.createdAt)
+]);
+var insertOperatorAuditLogSchema = createInsertSchema(operatorAuditLogs).omit({
+  id: true,
+  createdAt: true
+});
+
+// server/control-plane.ts
+var PLATFORM_SETTINGS_ID = "global";
+var COMPLIANCE_GATE_DEFINITIONS = [
+  {
+    key: "licensing",
+    category: "Legal",
+    label: "Gambling licences and legal opinions",
+    description: "Applicable licences and jurisdiction-by-jurisdiction legal approvals are current and documented."
+  },
+  {
+    key: "kyc_aml",
+    category: "Compliance",
+    label: "KYC, age verification, sanctions and AML",
+    description: "Identity, age, sanctions, AML, source-of-funds and regulatory-reporting controls are integrated and tested."
+  },
+  {
+    key: "geofencing",
+    category: "Compliance",
+    label: "Geolocation and geofencing",
+    description: "Jurisdiction controls, VPN/proxy policy and location evidence have been approved and verified."
+  },
+  {
+    key: "payments_ledger",
+    category: "Finance",
+    label: "Payments, player funds and ledger",
+    description: "Payment provider, withdrawals, reconciliation, chargebacks and audited segregated-funds accounting are operational."
+  },
+  {
+    key: "rng_draws",
+    category: "Games",
+    label: "Certified RNG and draw publication",
+    description: "Independent game certification and a signed, immutable draw-publication process are in place."
+  },
+  {
+    key: "responsible_gaming",
+    category: "Player safety",
+    label: "Responsible-gaming controls",
+    description: "Limits, cooling-off, self-exclusion, reality checks, affordability interventions and support escalation are tested."
+  },
+  {
+    key: "player_identity",
+    category: "Security",
+    label: "Player accounts and session security",
+    description: "Authenticated player ownership, MFA/recovery, device controls and consent workflows are production-ready."
+  },
+  {
+    key: "legal_content",
+    category: "Legal",
+    label: "Terms, privacy and complaints",
+    description: "Counsel-approved terms, rules, payout policy, privacy/cookies, complaints/ADR and retention policies are published."
+  },
+  {
+    key: "security_assurance",
+    category: "Security",
+    label: "Independent security assurance",
+    description: "Penetration testing, threat model, dependency review, backups, incident exercises and operational monitoring are signed off."
+  },
+  {
+    key: "community_safety",
+    category: "Community",
+    label: "Community moderation and abuse handling",
+    description: "Authenticated identities, reporting, blocking, moderation and escalation processes are operational."
+  },
+  {
+    key: "resilience",
+    category: "Operations",
+    label: "Load, failover and settlement integrity",
+    description: "Load, failover, concurrency and settlement-idempotency tests pass against the selected providers and database."
+  }
+];
+function initialPlatformSettings() {
+  return {
+    id: PLATFORM_SETTINGS_ID,
+    bettingEnabled: process.env.BETTING_ENABLED === "true" && process.env.NODE_ENV !== "production",
+    communityPostingEnabled: process.env.COMMUNITY_POSTING_ENABLED === "true" && process.env.NODE_ENV !== "production",
+    contactSubmissionsEnabled: process.env.PUBLIC_PREVIEW_MODE !== "true" && process.env.NODE_ENV !== "production",
+    maintenanceMode: false,
+    houseEdgePercentage: Number(process.env.HOUSE_EDGE_PERCENTAGE ?? 15),
+    maxDailyPayoutRatio: Number(process.env.MAX_DAILY_PAYOUT_RATIO ?? 0.75),
+    maxSingleWinMultiplier: Number(process.env.MAX_SINGLE_WIN_MULTIPLIER ?? 1e3),
+    updatedBy: "system",
+    updatedAt: /* @__PURE__ */ new Date()
+  };
+}
+function initialComplianceGates() {
+  return COMPLIANCE_GATE_DEFINITIONS.map((gate) => ({
+    ...gate,
+    status: "pending",
+    evidence: null,
+    reviewedBy: null,
+    reviewedAt: null,
+    updatedAt: /* @__PURE__ */ new Date()
+  }));
+}
+function infrastructureReadiness() {
+  return {
+    persistentDatabase: Boolean(process.env.DATABASE_URL?.trim()),
+    operatorAuthentication: Boolean(process.env.ADMIN_API_KEY?.trim()) || process.env.NODE_ENV !== "production",
+    publicPreviewMode: process.env.PUBLIC_PREVIEW_MODE === "true"
+  };
+}
+function incompleteLaunchGates(gates) {
+  const statusByKey = new Map(gates.map((gate) => [gate.key, gate.status]));
+  return COMPLIANCE_GATE_DEFINITIONS.filter((gate) => statusByKey.get(gate.key) !== "complete").map((gate) => gate.key);
+}
+function launchBlockers(gates, infrastructure) {
+  const blockers = incompleteLaunchGates(gates);
+  if (!infrastructure.persistentDatabase) blockers.unshift("persistent_database");
+  if (!infrastructure.operatorAuthentication) blockers.unshift("operator_authentication");
+  if (infrastructure.publicPreviewMode) blockers.unshift("public_preview_mode");
+  return blockers;
+}
+function operationalCapabilities(settings, gates, infrastructure) {
+  const maintenanceMode = settings.maintenanceMode;
+  const allLaunchGatesComplete = launchBlockers(gates, infrastructure).length === 0;
+  const communityReady = gates.some((gate) => gate.key === "community_safety" && gate.status === "complete") && gates.some((gate) => gate.key === "player_identity" && gate.status === "complete");
+  return {
+    bettingEnabled: !maintenanceMode && allLaunchGatesComplete && settings.bettingEnabled,
+    communityPostingEnabled: !maintenanceMode && !infrastructure.publicPreviewMode && communityReady && settings.communityPostingEnabled,
+    contactSubmissionsEnabled: !maintenanceMode && !infrastructure.publicPreviewMode && settings.contactSubmissionsEnabled,
+    // This codebase does not yet contain a payment-provider or audited-ledger implementation.
+    realMoneyPaymentsEnabled: false,
+    maintenanceMode
+  };
+}
 
 // server/database-storage.ts
 var MAX_LIST_ROWS = 500;
 var DatabaseStorage = class {
   db;
   catalogReady;
+  controlPlaneReady;
   constructor(connectionString) {
     this.db = drizzle(neon(connectionString));
   }
@@ -311,6 +477,18 @@ var DatabaseStorage = class {
       });
     }
     return this.catalogReady;
+  }
+  ensureControlPlane() {
+    if (!this.controlPlaneReady) {
+      this.controlPlaneReady = Promise.all([
+        this.db.insert(platformSettings).values(initialPlatformSettings()).onConflictDoNothing({ target: platformSettings.id }),
+        this.db.insert(complianceGates).values(initialComplianceGates()).onConflictDoNothing({ target: complianceGates.key })
+      ]).then(() => void 0).catch((error) => {
+        this.controlPlaneReady = void 0;
+        throw error;
+      });
+    }
+    return this.controlPlaneReady;
   }
   async getGame(id) {
     await this.ensureCatalog();
@@ -466,6 +644,32 @@ var DatabaseStorage = class {
       status: "new"
     }).returning())[0];
   }
+  async getPlatformSettings() {
+    await this.ensureControlPlane();
+    return (await this.db.select().from(platformSettings).where(eq(platformSettings.id, PLATFORM_SETTINGS_ID)).limit(1))[0];
+  }
+  async updatePlatformSettings(update) {
+    await this.ensureControlPlane();
+    const { id: _id, ...allowed } = update;
+    return (await this.db.update(platformSettings).set({ ...allowed, updatedAt: /* @__PURE__ */ new Date() }).where(eq(platformSettings.id, PLATFORM_SETTINGS_ID)).returning())[0];
+  }
+  async getComplianceGates() {
+    await this.ensureControlPlane();
+    return this.db.select().from(complianceGates).orderBy(complianceGates.category, complianceGates.label);
+  }
+  async updateComplianceGate(key, update) {
+    await this.ensureControlPlane();
+    const { key: _key, ...allowed } = update;
+    return (await this.db.update(complianceGates).set({ ...allowed, updatedAt: /* @__PURE__ */ new Date() }).where(eq(complianceGates.key, key)).returning())[0];
+  }
+  async getOperatorAuditLogs() {
+    await this.ensureControlPlane();
+    return this.db.select().from(operatorAuditLogs).orderBy(desc(operatorAuditLogs.createdAt)).limit(100);
+  }
+  async createOperatorAuditLog(log) {
+    await this.ensureControlPlane();
+    return (await this.db.insert(operatorAuditLogs).values(log).returning())[0];
+  }
 };
 
 // server/storage.ts
@@ -479,6 +683,9 @@ var MemStorage = class {
   forumPosts;
   forumComments;
   contactInquiries;
+  platformSettings;
+  complianceGates;
+  operatorAuditLogs;
   constructor() {
     this.games = /* @__PURE__ */ new Map();
     this.bets = /* @__PURE__ */ new Map();
@@ -489,6 +696,9 @@ var MemStorage = class {
     this.forumPosts = /* @__PURE__ */ new Map();
     this.forumComments = /* @__PURE__ */ new Map();
     this.contactInquiries = /* @__PURE__ */ new Map();
+    this.platformSettings = initialPlatformSettings();
+    this.complianceGates = new Map(initialComplianceGates().map((gate) => [gate.key, gate]));
+    this.operatorAuditLogs = [];
     this.seedGames();
   }
   seedGames() {
@@ -761,6 +971,36 @@ var MemStorage = class {
     this.contactInquiries.set(id, inquiry);
     return inquiry;
   }
+  async getPlatformSettings() {
+    return { ...this.platformSettings };
+  }
+  async updatePlatformSettings(update) {
+    this.platformSettings = {
+      ...this.platformSettings,
+      ...update,
+      id: PLATFORM_SETTINGS_ID,
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    return { ...this.platformSettings };
+  }
+  async getComplianceGates() {
+    return Array.from(this.complianceGates.values()).sort((a, b) => a.category.localeCompare(b.category));
+  }
+  async updateComplianceGate(key, update) {
+    const gate = this.complianceGates.get(key);
+    if (!gate) return void 0;
+    const updated = { ...gate, ...update, key, updatedAt: /* @__PURE__ */ new Date() };
+    this.complianceGates.set(key, updated);
+    return updated;
+  }
+  async getOperatorAuditLogs() {
+    return this.operatorAuditLogs.slice(0, 100);
+  }
+  async createOperatorAuditLog(log) {
+    const entry = { id: randomUUID(), ...log, createdAt: /* @__PURE__ */ new Date() };
+    this.operatorAuditLogs.unshift(entry);
+    return entry;
+  }
 };
 function createStorage() {
   const databaseUrl = process.env.DATABASE_URL?.trim();
@@ -976,15 +1216,44 @@ function validateResultForGame(result, game) {
 // server/routes.ts
 async function registerRoutes(app) {
   const publicPreviewMode = process.env.PUBLIC_PREVIEW_MODE === "true";
-  const bettingEnabled = process.env.BETTING_ENABLED === "true" || process.env.NODE_ENV !== "production";
   const demoDrawsEnabled = process.env.DEMO_DRAW_GENERATION_ENABLED === "true" && process.env.NODE_ENV !== "production";
-  app.get("/api/capabilities", (_req, res) => {
-    res.json({
-      bettingEnabled,
-      communityPostingEnabled: process.env.COMMUNITY_POSTING_ENABLED === "true" || process.env.NODE_ENV !== "production",
-      contactSubmissionsEnabled: !publicPreviewMode,
-      realMoneyPaymentsEnabled: false
+  const getControlState = async () => {
+    const [settings, complianceGates2] = await Promise.all([
+      storage.getPlatformSettings(),
+      storage.getComplianceGates()
+    ]);
+    const infrastructure = infrastructureReadiness();
+    const capabilities = operationalCapabilities(settings, complianceGates2, infrastructure);
+    gameLogic.updateConfig({
+      houseEdgePercentage: settings.houseEdgePercentage,
+      maxDailyPayoutRatio: settings.maxDailyPayoutRatio,
+      maxSingleWinMultiplier: settings.maxSingleWinMultiplier
     });
+    return {
+      settings,
+      complianceGates: complianceGates2,
+      infrastructure,
+      capabilities,
+      launchBlockers: launchBlockers(complianceGates2, infrastructure)
+    };
+  };
+  const adminActor = (req) => req.get("x-admin-actor")?.trim().slice(0, 100) || "operator";
+  const requirePersistentControlPlane = (res) => {
+    if (publicPreviewMode || !process.env.DATABASE_URL?.trim()) {
+      res.status(409).json({
+        error: "Persistent operator controls require DATABASE_URL and PUBLIC_PREVIEW_MODE=false"
+      });
+      return false;
+    }
+    return true;
+  };
+  app.get("/api/capabilities", async (_req, res) => {
+    try {
+      const { capabilities } = await getControlState();
+      res.json(capabilities);
+    } catch {
+      res.status(503).json({ error: "Platform controls are unavailable" });
+    }
   });
   app.get("/api/games", async (_req, res) => {
     try {
@@ -1007,7 +1276,8 @@ async function registerRoutes(app) {
   });
   app.post("/api/bets", async (req, res) => {
     try {
-      if (!bettingEnabled) {
+      const { capabilities } = await getControlState();
+      if (!capabilities.bettingEnabled) {
         return res.status(503).json({ error: "Bet placement is disabled until production compliance checks are complete" });
       }
       const validatedBet = insertBetSchema.parse(req.body);
@@ -1306,26 +1576,43 @@ async function registerRoutes(app) {
   });
   app.get("/api/config", requireAdmin, async (_req, res) => {
     try {
-      const config = gameLogic.getConfig();
-      res.json(config);
+      const { settings } = await getControlState();
+      res.json({
+        houseEdgePercentage: settings.houseEdgePercentage,
+        maxDailyPayoutRatio: settings.maxDailyPayoutRatio,
+        maxSingleWinMultiplier: settings.maxSingleWinMultiplier
+      });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch config" });
     }
   });
   app.put("/api/config", requireAdmin, async (req, res) => {
     try {
-      if (process.env.NODE_ENV === "production") {
-        return res.status(405).json({ error: "Runtime configuration is immutable in production" });
-      }
+      if (!requirePersistentControlPlane(res)) return;
       const update = z2.object({
         houseEdgePercentage: z2.number().min(0).max(50).optional(),
         maxDailyPayoutRatio: z2.number().min(0).max(1).optional(),
         maxSingleWinMultiplier: z2.number().positive().max(1e6).optional()
       }).strict().parse(req.body);
+      const before = await storage.getPlatformSettings();
+      const settings = await storage.updatePlatformSettings({
+        ...update,
+        updatedBy: adminActor(req)
+      });
+      await storage.createOperatorAuditLog({
+        actor: adminActor(req),
+        action: "risk_config.updated",
+        target: "platform_settings",
+        details: JSON.stringify({ before, update })
+      });
       gameLogic.updateConfig(update);
-      const config = gameLogic.getConfig();
-      res.json(config);
+      res.json({
+        houseEdgePercentage: settings.houseEdgePercentage,
+        maxDailyPayoutRatio: settings.maxDailyPayoutRatio,
+        maxSingleWinMultiplier: settings.maxSingleWinMultiplier
+      });
     } catch (error) {
+      if (error instanceof z2.ZodError) return res.status(400).json({ error: "Invalid risk configuration", details: error.issues });
       res.status(500).json({ error: "Failed to update config" });
     }
   });
@@ -1535,7 +1822,8 @@ async function registerRoutes(app) {
   });
   app.post("/api/forum/posts", async (req, res) => {
     try {
-      if (process.env.COMMUNITY_POSTING_ENABLED !== "true" && process.env.NODE_ENV === "production") {
+      const { capabilities } = await getControlState();
+      if (!capabilities.communityPostingEnabled) {
         return res.status(503).json({ error: "Community posting is temporarily disabled" });
       }
       const validatedPost = insertForumPostSchema.parse(req.body);
@@ -1558,7 +1846,8 @@ async function registerRoutes(app) {
   });
   app.post("/api/forum/comments", async (req, res) => {
     try {
-      if (process.env.COMMUNITY_POSTING_ENABLED !== "true" && process.env.NODE_ENV === "production") {
+      const { capabilities } = await getControlState();
+      if (!capabilities.communityPostingEnabled) {
         return res.status(503).json({ error: "Community posting is temporarily disabled" });
       }
       const validatedComment = insertForumCommentSchema.parse(req.body);
@@ -1573,7 +1862,8 @@ async function registerRoutes(app) {
   });
   app.post("/api/contact", async (req, res) => {
     try {
-      if (publicPreviewMode) {
+      const { capabilities } = await getControlState();
+      if (!capabilities.contactSubmissionsEnabled) {
         return res.status(503).json({ error: "Contact submissions are unavailable in public preview mode" });
       }
       const validatedInquiry = insertContactInquirySchema.parse(req.body);
@@ -1592,6 +1882,107 @@ async function registerRoutes(app) {
       res.json(inquiries);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch contact inquiries" });
+    }
+  });
+  app.get("/api/admin/control-plane", requireAdmin, async (_req, res) => {
+    try {
+      const [control, bets2, winnings2, results2, inquiries, games2, auditLogs] = await Promise.all([
+        getControlState(),
+        storage.getAllBets(),
+        storage.getAllWinnings(),
+        storage.getAllResults(),
+        storage.getAllContactInquiries(),
+        storage.getAllGames(),
+        storage.getOperatorAuditLogs()
+      ]);
+      res.setHeader("Cache-Control", "no-store, private");
+      res.json({
+        ...control,
+        metrics: {
+          totalBets: bets2.length,
+          pendingBets: bets2.filter((bet) => bet.status === "pending").length,
+          totalStaked: bets2.reduce((sum, bet) => sum + bet.stakeAmount, 0),
+          totalPaid: winnings2.reduce((sum, winning) => sum + winning.winningAmount, 0),
+          publishedResults: results2.length,
+          openInquiries: inquiries.filter((inquiry) => inquiry.status === "new").length
+        },
+        games: games2,
+        recentBets: bets2.slice(0, 10),
+        recentResults: results2.slice(0, 10),
+        recentInquiries: inquiries.slice(0, 10),
+        auditLogs
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to load the operator control plane" });
+    }
+  });
+  app.put("/api/admin/features", requireAdmin, async (req, res) => {
+    try {
+      if (!requirePersistentControlPlane(res)) return;
+      const update = z2.object({
+        bettingEnabled: z2.boolean().optional(),
+        communityPostingEnabled: z2.boolean().optional(),
+        contactSubmissionsEnabled: z2.boolean().optional(),
+        maintenanceMode: z2.boolean().optional()
+      }).strict().refine((value) => Object.keys(value).length > 0, "At least one feature must be supplied").parse(req.body);
+      const control = await getControlState();
+      if (update.bettingEnabled === true && control.launchBlockers.length > 0) {
+        return res.status(409).json({
+          error: "Betting cannot be enabled until every launch gate is complete",
+          blockers: control.launchBlockers
+        });
+      }
+      if (update.communityPostingEnabled === true) {
+        const required = ["community_safety", "player_identity"];
+        const incomplete = required.filter((key) => !control.complianceGates.some((gate) => gate.key === key && gate.status === "complete"));
+        if (incomplete.length > 0) {
+          return res.status(409).json({ error: "Community posting requires identity and moderation controls", blockers: incomplete });
+        }
+      }
+      const settings = await storage.updatePlatformSettings({ ...update, updatedBy: adminActor(req) });
+      await storage.createOperatorAuditLog({
+        actor: adminActor(req),
+        action: "feature_flags.updated",
+        target: "platform_settings",
+        details: JSON.stringify({ before: control.settings, update })
+      });
+      const refreshed = await getControlState();
+      res.json({ settings, capabilities: refreshed.capabilities, launchBlockers: refreshed.launchBlockers });
+    } catch (error) {
+      if (error instanceof z2.ZodError) return res.status(400).json({ error: "Invalid feature configuration", details: error.issues });
+      res.status(500).json({ error: "Failed to update feature controls" });
+    }
+  });
+  app.put("/api/admin/compliance/:key", requireAdmin, async (req, res) => {
+    try {
+      if (!requirePersistentControlPlane(res)) return;
+      const update = z2.object({
+        status: z2.enum(["pending", "complete", "blocked"]),
+        evidence: z2.string().trim().max(2e3).nullable().optional(),
+        reviewedBy: z2.string().trim().max(100).nullable().optional()
+      }).strict().parse(req.body);
+      if (update.status === "complete" && (!update.evidence || update.evidence.length < 10 || !update.reviewedBy || update.reviewedBy.length < 2)) {
+        return res.status(400).json({ error: "Completed gates require evidence and a reviewer" });
+      }
+      const before = (await storage.getComplianceGates()).find((gate2) => gate2.key === req.params.key);
+      if (!before) return res.status(404).json({ error: "Compliance gate not found" });
+      const gate = await storage.updateComplianceGate(req.params.key, {
+        status: update.status,
+        evidence: update.evidence ?? null,
+        reviewedBy: update.reviewedBy ?? null,
+        reviewedAt: update.status === "complete" ? /* @__PURE__ */ new Date() : null
+      });
+      await storage.createOperatorAuditLog({
+        actor: adminActor(req),
+        action: "compliance_gate.updated",
+        target: req.params.key,
+        details: JSON.stringify({ before, after: gate })
+      });
+      const control = await getControlState();
+      res.json({ gate, launchBlockers: control.launchBlockers, capabilities: control.capabilities });
+    } catch (error) {
+      if (error instanceof z2.ZodError) return res.status(400).json({ error: "Invalid compliance update", details: error.issues });
+      res.status(500).json({ error: "Failed to update compliance gate" });
     }
   });
 }
@@ -1615,7 +2006,7 @@ function corsMiddleware() {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Admin-Key,X-Request-Id");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Admin-Key,X-Admin-Actor,X-Request-Id");
     res.setHeader("Access-Control-Allow-Credentials", "true");
     if (req.method === "OPTIONS") {
       res.status(204).end();
@@ -1658,7 +2049,7 @@ async function createApplication() {
     legacyHeaders: false,
     message: { error: "Too many requests; please try again later" }
   }));
-  app.use(["/api/bets", "/api/winnings", "/api/contact"], (_req, res, next) => {
+  app.use(["/api/bets", "/api/winnings", "/api/contact", "/api/admin"], (_req, res, next) => {
     res.setHeader("Cache-Control", "no-store, private");
     next();
   });

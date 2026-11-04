@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { randomInt } from "node:crypto";
 import { z } from "zod";
 import { storage } from "./storage";
@@ -6,19 +6,57 @@ import { insertBetSchema, insertResultSchema, insertWinningSchema, insertGameCod
 import { gameLogic } from "./game-logic";
 import { requireAdmin } from "./security";
 import { validateBetForGame, validateResultForGame } from "./validation";
+import {
+  infrastructureReadiness,
+  launchBlockers,
+  operationalCapabilities,
+} from "./control-plane";
 
 export async function registerRoutes(app: Express): Promise<void> {
   const publicPreviewMode = process.env.PUBLIC_PREVIEW_MODE === "true";
-  const bettingEnabled = process.env.BETTING_ENABLED === "true" || process.env.NODE_ENV !== "production";
   const demoDrawsEnabled = process.env.DEMO_DRAW_GENERATION_ENABLED === "true" && process.env.NODE_ENV !== "production";
 
-  app.get("/api/capabilities", (_req, res) => {
-    res.json({
-      bettingEnabled,
-      communityPostingEnabled: process.env.COMMUNITY_POSTING_ENABLED === "true" || process.env.NODE_ENV !== "production",
-      contactSubmissionsEnabled: !publicPreviewMode,
-      realMoneyPaymentsEnabled: false,
+  const getControlState = async () => {
+    const [settings, complianceGates] = await Promise.all([
+      storage.getPlatformSettings(),
+      storage.getComplianceGates(),
+    ]);
+    const infrastructure = infrastructureReadiness();
+    const capabilities = operationalCapabilities(settings, complianceGates, infrastructure);
+    gameLogic.updateConfig({
+      houseEdgePercentage: settings.houseEdgePercentage,
+      maxDailyPayoutRatio: settings.maxDailyPayoutRatio,
+      maxSingleWinMultiplier: settings.maxSingleWinMultiplier,
     });
+    return {
+      settings,
+      complianceGates,
+      infrastructure,
+      capabilities,
+      launchBlockers: launchBlockers(complianceGates, infrastructure),
+    };
+  };
+
+  const adminActor = (req: Request) =>
+    (req.get("x-admin-actor")?.trim().slice(0, 100) || "operator");
+
+  const requirePersistentControlPlane = (res: Response) => {
+    if (publicPreviewMode || !process.env.DATABASE_URL?.trim()) {
+      res.status(409).json({
+        error: "Persistent operator controls require DATABASE_URL and PUBLIC_PREVIEW_MODE=false",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  app.get("/api/capabilities", async (_req, res) => {
+    try {
+      const { capabilities } = await getControlState();
+      res.json(capabilities);
+    } catch {
+      res.status(503).json({ error: "Platform controls are unavailable" });
+    }
   });
   
   // Get all games
@@ -47,7 +85,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Place a bet
   app.post("/api/bets", async (req, res) => {
     try {
-      if (!bettingEnabled) {
+      const { capabilities } = await getControlState();
+      if (!capabilities.bettingEnabled) {
         return res.status(503).json({ error: "Bet placement is disabled until production compliance checks are complete" });
       }
       const validatedBet = insertBetSchema.parse(req.body);
@@ -434,8 +473,12 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Get house edge configuration
   app.get("/api/config", requireAdmin, async (_req, res) => {
     try {
-      const config = gameLogic.getConfig();
-      res.json(config);
+      const { settings } = await getControlState();
+      res.json({
+        houseEdgePercentage: settings.houseEdgePercentage,
+        maxDailyPayoutRatio: settings.maxDailyPayoutRatio,
+        maxSingleWinMultiplier: settings.maxSingleWinMultiplier,
+      });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch config" });
     }
@@ -444,18 +487,31 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Update house edge configuration (admin only in production)
   app.put("/api/config", requireAdmin, async (req, res) => {
     try {
-      if (process.env.NODE_ENV === "production") {
-        return res.status(405).json({ error: "Runtime configuration is immutable in production" });
-      }
+      if (!requirePersistentControlPlane(res)) return;
       const update = z.object({
         houseEdgePercentage: z.number().min(0).max(50).optional(),
         maxDailyPayoutRatio: z.number().min(0).max(1).optional(),
         maxSingleWinMultiplier: z.number().positive().max(1_000_000).optional(),
       }).strict().parse(req.body);
+      const before = await storage.getPlatformSettings();
+      const settings = await storage.updatePlatformSettings({
+        ...update,
+        updatedBy: adminActor(req),
+      });
+      await storage.createOperatorAuditLog({
+        actor: adminActor(req),
+        action: "risk_config.updated",
+        target: "platform_settings",
+        details: JSON.stringify({ before, update }),
+      });
       gameLogic.updateConfig(update);
-      const config = gameLogic.getConfig();
-      res.json(config);
+      res.json({
+        houseEdgePercentage: settings.houseEdgePercentage,
+        maxDailyPayoutRatio: settings.maxDailyPayoutRatio,
+        maxSingleWinMultiplier: settings.maxSingleWinMultiplier,
+      });
     } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ error: "Invalid risk configuration", details: error.issues });
       res.status(500).json({ error: "Failed to update config" });
     }
   });
@@ -715,7 +771,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Create forum post
   app.post("/api/forum/posts", async (req, res) => {
     try {
-      if (process.env.COMMUNITY_POSTING_ENABLED !== "true" && process.env.NODE_ENV === "production") {
+      const { capabilities } = await getControlState();
+      if (!capabilities.communityPostingEnabled) {
         return res.status(503).json({ error: "Community posting is temporarily disabled" });
       }
       const validatedPost = insertForumPostSchema.parse(req.body);
@@ -742,7 +799,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Create comment
   app.post("/api/forum/comments", async (req, res) => {
     try {
-      if (process.env.COMMUNITY_POSTING_ENABLED !== "true" && process.env.NODE_ENV === "production") {
+      const { capabilities } = await getControlState();
+      if (!capabilities.communityPostingEnabled) {
         return res.status(503).json({ error: "Community posting is temporarily disabled" });
       }
       const validatedComment = insertForumCommentSchema.parse(req.body);
@@ -759,7 +817,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Create contact inquiry
   app.post("/api/contact", async (req, res) => {
     try {
-      if (publicPreviewMode) {
+      const { capabilities } = await getControlState();
+      if (!capabilities.contactSubmissionsEnabled) {
         return res.status(503).json({ error: "Contact submissions are unavailable in public preview mode" });
       }
       const validatedInquiry = insertContactInquirySchema.parse(req.body);
@@ -780,6 +839,113 @@ export async function registerRoutes(app: Express): Promise<void> {
       res.json(inquiries);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch contact inquiries" });
+    }
+  });
+
+  app.get("/api/admin/control-plane", requireAdmin, async (_req, res) => {
+    try {
+      const [control, bets, winnings, results, inquiries, games, auditLogs] = await Promise.all([
+        getControlState(),
+        storage.getAllBets(),
+        storage.getAllWinnings(),
+        storage.getAllResults(),
+        storage.getAllContactInquiries(),
+        storage.getAllGames(),
+        storage.getOperatorAuditLogs(),
+      ]);
+      res.setHeader("Cache-Control", "no-store, private");
+      res.json({
+        ...control,
+        metrics: {
+          totalBets: bets.length,
+          pendingBets: bets.filter((bet) => bet.status === "pending").length,
+          totalStaked: bets.reduce((sum, bet) => sum + bet.stakeAmount, 0),
+          totalPaid: winnings.reduce((sum, winning) => sum + winning.winningAmount, 0),
+          publishedResults: results.length,
+          openInquiries: inquiries.filter((inquiry) => inquiry.status === "new").length,
+        },
+        games,
+        recentBets: bets.slice(0, 10),
+        recentResults: results.slice(0, 10),
+        recentInquiries: inquiries.slice(0, 10),
+        auditLogs,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to load the operator control plane" });
+    }
+  });
+
+  app.put("/api/admin/features", requireAdmin, async (req, res) => {
+    try {
+      if (!requirePersistentControlPlane(res)) return;
+      const update = z.object({
+        bettingEnabled: z.boolean().optional(),
+        communityPostingEnabled: z.boolean().optional(),
+        contactSubmissionsEnabled: z.boolean().optional(),
+        maintenanceMode: z.boolean().optional(),
+      }).strict().refine((value) => Object.keys(value).length > 0, "At least one feature must be supplied").parse(req.body);
+
+      const control = await getControlState();
+      if (update.bettingEnabled === true && control.launchBlockers.length > 0) {
+        return res.status(409).json({
+          error: "Betting cannot be enabled until every launch gate is complete",
+          blockers: control.launchBlockers,
+        });
+      }
+      if (update.communityPostingEnabled === true) {
+        const required = ["community_safety", "player_identity"];
+        const incomplete = required.filter((key) => !control.complianceGates.some((gate) => gate.key === key && gate.status === "complete"));
+        if (incomplete.length > 0) {
+          return res.status(409).json({ error: "Community posting requires identity and moderation controls", blockers: incomplete });
+        }
+      }
+
+      const settings = await storage.updatePlatformSettings({ ...update, updatedBy: adminActor(req) });
+      await storage.createOperatorAuditLog({
+        actor: adminActor(req),
+        action: "feature_flags.updated",
+        target: "platform_settings",
+        details: JSON.stringify({ before: control.settings, update }),
+      });
+      const refreshed = await getControlState();
+      res.json({ settings, capabilities: refreshed.capabilities, launchBlockers: refreshed.launchBlockers });
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ error: "Invalid feature configuration", details: error.issues });
+      res.status(500).json({ error: "Failed to update feature controls" });
+    }
+  });
+
+  app.put("/api/admin/compliance/:key", requireAdmin, async (req, res) => {
+    try {
+      if (!requirePersistentControlPlane(res)) return;
+      const update = z.object({
+        status: z.enum(["pending", "complete", "blocked"]),
+        evidence: z.string().trim().max(2_000).nullable().optional(),
+        reviewedBy: z.string().trim().max(100).nullable().optional(),
+      }).strict().parse(req.body);
+      if (update.status === "complete" && (!update.evidence || update.evidence.length < 10 || !update.reviewedBy || update.reviewedBy.length < 2)) {
+        return res.status(400).json({ error: "Completed gates require evidence and a reviewer" });
+      }
+
+      const before = (await storage.getComplianceGates()).find((gate) => gate.key === req.params.key);
+      if (!before) return res.status(404).json({ error: "Compliance gate not found" });
+      const gate = await storage.updateComplianceGate(req.params.key, {
+        status: update.status,
+        evidence: update.evidence ?? null,
+        reviewedBy: update.reviewedBy ?? null,
+        reviewedAt: update.status === "complete" ? new Date() : null,
+      });
+      await storage.createOperatorAuditLog({
+        actor: adminActor(req),
+        action: "compliance_gate.updated",
+        target: req.params.key,
+        details: JSON.stringify({ before, after: gate }),
+      });
+      const control = await getControlState();
+      res.json({ gate, launchBlockers: control.launchBlockers, capabilities: control.capabilities });
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ error: "Invalid compliance update", details: error.issues });
+      res.status(500).json({ error: "Failed to update compliance gate" });
     }
   });
 

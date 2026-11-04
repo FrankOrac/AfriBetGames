@@ -226,3 +226,54 @@ export const insertContactInquirySchema = z.object({
 
 export type InsertContactInquiry = z.infer<typeof insertContactInquirySchema>;
 export type ContactInquiry = typeof contactInquiries.$inferSelect;
+
+export const platformSettings = pgTable("platform_settings", {
+  id: text("id").primaryKey(),
+  bettingEnabled: boolean("betting_enabled").notNull().default(false),
+  communityPostingEnabled: boolean("community_posting_enabled").notNull().default(false),
+  contactSubmissionsEnabled: boolean("contact_submissions_enabled").notNull().default(false),
+  maintenanceMode: boolean("maintenance_mode").notNull().default(false),
+  houseEdgePercentage: numeric("house_edge_percentage", { precision: 5, scale: 2, mode: "number" }).notNull().default(15),
+  maxDailyPayoutRatio: numeric("max_daily_payout_ratio", { precision: 5, scale: 4, mode: "number" }).notNull().default(0.75),
+  maxSingleWinMultiplier: numeric("max_single_win_multiplier", { precision: 12, scale: 2, mode: "number" }).notNull().default(1000),
+  updatedBy: text("updated_by").notNull().default("system"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertPlatformSettingsSchema = createInsertSchema(platformSettings);
+export type InsertPlatformSettings = z.infer<typeof insertPlatformSettingsSchema>;
+export type PlatformSettings = typeof platformSettings.$inferSelect;
+
+export const complianceGates = pgTable("compliance_gates", {
+  key: text("key").primaryKey(),
+  category: text("category").notNull(),
+  label: text("label").notNull(),
+  description: text("description").notNull(),
+  status: text("status").notNull().default("pending"),
+  evidence: text("evidence"),
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertComplianceGateSchema = createInsertSchema(complianceGates);
+export type InsertComplianceGate = z.infer<typeof insertComplianceGateSchema>;
+export type ComplianceGate = typeof complianceGates.$inferSelect;
+
+export const operatorAuditLogs = pgTable("operator_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actor: text("actor").notNull(),
+  action: text("action").notNull(),
+  target: text("target").notNull(),
+  details: text("details").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("operator_audit_logs_created_at_idx").on(table.createdAt),
+]);
+
+export const insertOperatorAuditLogSchema = createInsertSchema(operatorAuditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertOperatorAuditLog = z.infer<typeof insertOperatorAuditLogSchema>;
+export type OperatorAuditLog = typeof operatorAuditLogs.$inferSelect;

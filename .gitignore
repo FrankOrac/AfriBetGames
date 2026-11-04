@@ -11,3 +11,6 @@ vite.config.ts.*
 *.tar.gz
 # api/index.js is the checked-in Vercel function entry. The production build
 # regenerates it from server/vercel-handler.ts to keep it in sync.
+
+.vercel
+.env.local

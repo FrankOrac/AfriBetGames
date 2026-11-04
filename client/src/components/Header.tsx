@@ -15,7 +15,7 @@ export default function Header() {
     { label: 'Home', href: '/' },
     { label: 'Games', href: '/#games' },
     { label: 'Results', href: '/results' },
-    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'My Tickets', href: '/dashboard' },
     { label: 'Forum', href: '/forum' },
     { label: 'About', href: '/#about' },
     { label: 'Investors', href: '/#investors' },
