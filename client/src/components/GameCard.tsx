@@ -2,8 +2,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LucideIcon } from 'lucide-react';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { useState } from 'react';
+import { motion } from 'framer-motion';
 
 interface GameCardProps {
   title: string;
@@ -28,80 +27,19 @@ export default function GameCard({
   badge,
   href,
 }: GameCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const mouseXSpring = useSpring(x, { stiffness: 300, damping: 30 });
-  const mouseYSpring = useSpring(y, { stiffness: 300, damping: 30 });
-
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["12deg", "-12deg"]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-12deg", "12deg"]);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const xPct = mouseX / width - 0.5;
-    const yPct = mouseY / height - 0.5;
-    x.set(xPct);
-    y.set(yPct);
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-    x.set(0);
-    y.set(0);
-  };
-
   return (
-    <motion.div
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        rotateX,
-        rotateY,
-        transformStyle: "preserve-3d",
-      }}
-      initial={{ opacity: 0, y: 50 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.5 }}
-      className="relative"
-    >
-      <motion.div
-        animate={{
-          scale: isHovered ? 1.05 : 1,
-        }}
-        transition={{ duration: 0.3 }}
-      >
+    <div className="group relative">
         <Card className="p-6 rounded-xl overflow-visible relative bg-gradient-to-br from-background via-background to-muted/30 border-2 hover:border-primary/50 transition-colors duration-300">
           {/* Glow effect on hover */}
-          <motion.div
-            className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-r from-primary/20 via-purple-500/20 to-primary/20 blur-xl"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isHovered ? 1 : 0 }}
-            transition={{ duration: 0.3 }}
-            style={{ transform: "translateZ(-20px)" }}
-          />
+          <div className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-r from-primary/20 via-purple-500/20 to-primary/20 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100" />
           
-          <motion.div 
-            className="relative z-10 flex flex-col gap-6"
-            style={{ transformStyle: "preserve-3d" }}
-          >
+          <div className="relative z-10 flex flex-col gap-6">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <motion.div 
                   className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center backdrop-blur-sm"
-                  animate={{
-                    rotateY: isHovered ? 360 : 0,
-                  }}
+                  whileHover={{ rotate: 6, scale: 1.05 }}
                   transition={{ duration: 0.6 }}
-                  style={{ transform: "translateZ(30px)" }}
                 >
                   <Icon className="w-6 h-6 text-primary" />
                 </motion.div>
@@ -171,37 +109,8 @@ export default function GameCard({
                 <a href={href}>Play {title}</a>
               </Button>
             </div>
-          </motion.div>
+          </div>
         </Card>
-      </motion.div>
-
-      {/* Floating particles effect */}
-      {isHovered && (
-        <>
-          {[...Array(5)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 bg-primary rounded-full"
-              initial={{ 
-                x: "50%", 
-                y: "50%",
-                opacity: 0 
-              }}
-              animate={{
-                x: `${50 + (Math.random() - 0.5) * 100}%`,
-                y: `${50 + (Math.random() - 0.5) * 100}%`,
-                opacity: [0, 1, 0],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                delay: i * 0.2,
-              }}
-              style={{ pointerEvents: "none" }}
-            />
-          ))}
-        </>
-      )}
-    </motion.div>
+    </div>
   );
 }
