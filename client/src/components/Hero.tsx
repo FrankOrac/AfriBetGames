@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Trophy, Zap, Clock } from 'lucide-react';
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import { useRef } from 'react';
+import { Link } from 'wouter';
 import heroImage from '@assets/generated_images/hero-celebration.webp';
 
 export default function Hero() {
@@ -138,12 +139,15 @@ export default function Hero() {
               whileTap={{ scale: 0.95 }}
             >
               <Button 
+                asChild
                 size="lg" 
                 className="text-lg px-8 py-6 min-h-14 shadow-2xl shadow-green-500/50"
                 data-testid="button-hero-start-playing"
               >
-                <Zap className="w-5 h-5 mr-2" />
-                Start Playing
+                <a href="#games">
+                  <Zap className="w-5 h-5 mr-2" />
+                  Start Playing
+                </a>
               </Button>
             </motion.div>
             <motion.div
@@ -151,12 +155,13 @@ export default function Hero() {
               whileTap={{ scale: 0.95 }}
             >
               <Button 
+                asChild
                 size="lg" 
                 variant="outline" 
                 className="text-lg px-8 py-6 min-h-14 backdrop-blur-md bg-white/20 text-white border-white/30 hover:bg-white/30 shadow-xl"
                 data-testid="button-hero-view-results"
               >
-                View Results
+                <Link href="/results">View Results</Link>
               </Button>
             </motion.div>
           </motion.div>

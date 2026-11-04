@@ -12,7 +12,7 @@ export default function GameCardExample() {
         oddsRange="1-5"
         selections="5 Numbers"
         minMatches="3+"
-        onPlay={() => console.log('Play Virtual Betting clicked')}
+        href="/virtual"
       />
     </div>
   );

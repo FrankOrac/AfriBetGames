@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { LucideIcon } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useState } from 'react';
+import { Link } from 'wouter';
 
 interface GameCardProps {
   title: string;
@@ -14,7 +15,7 @@ interface GameCardProps {
   selections: string;
   minMatches: string;
   badge?: string;
-  onPlay: () => void;
+  href: string;
 }
 
 export default function GameCard({
@@ -26,7 +27,7 @@ export default function GameCard({
   selections,
   minMatches,
   badge,
-  onPlay,
+  href,
 }: GameCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   
@@ -167,12 +168,12 @@ export default function GameCard({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Button 
+              <Button
+                asChild
                 className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/30" 
-                onClick={onPlay}
                 data-testid={`button-play-${title.toLowerCase().replace(/\s+/g, '-')}`}
               >
-                Play {title}
+                <Link href={href}>Play {title}</Link>
               </Button>
             </motion.div>
           </motion.div>

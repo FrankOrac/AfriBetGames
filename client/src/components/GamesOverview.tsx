@@ -1,11 +1,8 @@
-import { useLocation } from 'wouter';
 import GameCard from './GameCard';
 import { Zap, Calendar, TrendingUp, Rocket, Star, Sparkles, Crown, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function GamesOverview() {
-  const [, setLocation] = useLocation();
-
   const games = [
     {
       title: 'Virtual Betting',
@@ -208,7 +205,7 @@ export default function GamesOverview() {
             >
               <GameCard
                 {...game}
-                onPlay={() => setLocation(game.route)}
+                href={game.route}
               />
             </motion.div>
           ))}

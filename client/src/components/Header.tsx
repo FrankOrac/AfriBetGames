@@ -60,8 +60,8 @@ export default function Header() {
                 <Moon className="h-5 w-5" />
               )}
             </Button>
-            <Button size="default" data-testid="button-play-now">
-              Play Now
+            <Button asChild size="default" data-testid="button-play-now">
+              <a href="/#games">Play Now</a>
             </Button>
           </div>
 
@@ -110,8 +110,8 @@ export default function Header() {
                   </>
                 )}
               </Button>
-              <Button size="default" data-testid="mobile-button-play-now">
-                Play Now
+              <Button asChild size="default" data-testid="mobile-button-play-now">
+                <a href="/#games" onClick={() => setIsMenuOpen(false)}>Play Now</a>
               </Button>
             </div>
           </nav>
