@@ -83,7 +83,7 @@ export default function GameCard({
         <Card className="p-6 rounded-xl overflow-visible relative bg-gradient-to-br from-background via-background to-muted/30 border-2 hover:border-primary/50 transition-colors duration-300">
           {/* Glow effect on hover */}
           <motion.div
-            className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/20 via-purple-500/20 to-primary/20 blur-xl"
+            className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-r from-primary/20 via-purple-500/20 to-primary/20 blur-xl"
             initial={{ opacity: 0 }}
             animate={{ opacity: isHovered ? 1 : 0 }}
             transition={{ duration: 0.3 }}
@@ -91,7 +91,7 @@ export default function GameCard({
           />
           
           <motion.div 
-            className="flex flex-col gap-6 relative"
+            className="relative z-10 flex flex-col gap-6"
             style={{ transformStyle: "preserve-3d" }}
           >
             <div className="flex items-start justify-between">
