@@ -6,6 +6,7 @@ import { insertBetSchema, insertResultSchema, insertWinningSchema, insertGameCod
 import { gameLogic } from "./game-logic";
 import { requireAdmin } from "./security";
 import { validateBetForGame, validateResultForGame } from "./validation";
+import { createAutomatedDemoResult, settleBetAgainstResult } from "./demo-betting";
 import {
   infrastructureReadiness,
   launchBlockers,
@@ -153,9 +154,10 @@ export async function registerRoutes(app: Express): Promise<void> {
         gameLogic.getConfig().maxSingleWinMultiplier * gameValidation.value.stakeAmount,
       );
 
+      let demoWallet;
       if (isDemo) {
-        const wallet = await storage.adjustDemoWallet(demoSessionId!, -gameValidation.value.stakeAmount, "stake");
-        if (!wallet) return res.status(409).json({ error: "Insufficient demo balance. Add demo funds and try again." });
+        demoWallet = await storage.adjustDemoWallet(demoSessionId!, -gameValidation.value.stakeAmount, "stake");
+        if (!demoWallet) return res.status(409).json({ error: "Insufficient demo balance. Add demo funds and try again." });
       }
 
       let bet;
@@ -171,6 +173,23 @@ export async function registerRoutes(app: Express): Promise<void> {
         throw error;
       }
       
+      if (isDemo) {
+        try {
+          const demoResult = await storage.createResult(createAutomatedDemoResult(game, bet));
+          const demoOutcome = await settleBetAgainstResult(storage, gameLogic, bet, game, demoResult);
+          demoWallet = demoOutcome.wallet ?? await storage.getDemoWallet(demoSessionId!);
+          const settledBet = await storage.getBet(bet.id) ?? bet;
+          return res.status(201).json({ ...settledBet, demoResult, demoOutcome, demoWallet });
+        } catch (error) {
+          const currentBet = await storage.getBet(bet.id);
+          if (currentBet?.status === "pending") {
+            await storage.adjustDemoWallet(demoSessionId!, gameValidation.value.stakeAmount, "refund", bet.id);
+            await storage.updateBetOutcome(bet.id, "voided", 0, null);
+          }
+          throw error;
+        }
+      }
+
       res.status(201).json(bet);
     } catch (error) {
       if (error instanceof Error && 'issues' in error) {
@@ -289,159 +308,11 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!result) {
         return res.status(404).json({ error: "No results available for this game yet" });
       }
-
-      const selectedNumbers = JSON.parse(bet.selectedNumbers) as number[];
-      const winningNumbers = JSON.parse(result.winningNumbers) as number[];
-      const odds = JSON.parse(result.odds) as number[];
-
-      // Find matched numbers - ensure duplicates are only counted once
-      // Create a Set of unique selected numbers first
-      const uniqueSelectedNumbers = Array.from(new Set(selectedNumbers));
-      const matchedNumbers = uniqueSelectedNumbers.filter(num => winningNumbers.includes(num));
-      const matchedCount = matchedNumbers.length;
-
-      // Check if bonus number matched (for games with bonus)
-      const bonusMatched = bet.bonusNumber !== null && 
-                          bet.bonusNumber === result.bonusNumber;
-
-      // Get game to check minimum matches
       const game = await storage.getGame(bet.gameId);
       if (!game) {
         return res.status(404).json({ error: "Game not found" });
       }
-
-      // Check if winning already exists (avoid recalculation and side effects)
-      const existingWinning = await storage.getWinningByBet(bet.id);
-      
-      if (existingWinning && matchedCount >= game.minMatches) {
-        // Retrieve stored metadata for existing winning
-        const metadata = gameLogic.getWinningMetadata(bet.id);
-        const houseEdgeApplied = metadata?.houseEdgeApplied ?? false;
-        const singleWinCapApplied = metadata?.singleWinCapApplied ?? false;
-        const dailyCapApplied = metadata?.dailyCapApplied ?? false;
-        const limitApplied = singleWinCapApplied || dailyCapApplied;
-        
-        // Provide clear messaging based on which caps apply
-        let message = undefined;
-        if (singleWinCapApplied && dailyCapApplied) {
-          if (existingWinning.winningAmount === 0) {
-            message = "Congratulations! You matched the winning numbers, but both the maximum single win limit and today's daily payout limit have been reached.";
-          } else {
-            message = "Congratulations! Your winning has been capped by both the maximum single win limit and daily payout limits.";
-          }
-        } else if (dailyCapApplied) {
-          if (existingWinning.winningAmount === 0) {
-            message = "Congratulations! You matched the winning numbers, but today's daily payout limit has been reached. Please check back tomorrow.";
-          } else {
-            message = "Congratulations! Your winning has been capped due to daily payout limits.";
-          }
-        } else if (singleWinCapApplied) {
-          message = "Congratulations! Your winning has been capped due to maximum single win limits.";
-        } else if (houseEdgeApplied) {
-          message = "Congratulations! You won!";
-        }
-        
-        return res.json({ 
-          won: true, 
-          winning: existingWinning,
-          bonusMatched,
-          houseEdgeApplied,
-          limitApplied,
-          singleWinCapApplied,
-          dailyCapApplied,
-          message,
-        });
-      }
-
-      // Calculate winnings (first time only)
-      let winningAmount = 0;
-      let houseEdgeApplied = false;
-      let limitApplied = false;
-      
-      if (matchedCount >= game.minMatches) {
-        // Get odds for matched numbers
-        const matchedOdds = matchedNumbers.map(num => {
-          const index = winningNumbers.indexOf(num);
-          return odds[index] || 1;
-        });
-
-        // Multiply all matched odds together, then multiply by stake
-        let baseWinning = matchedOdds.reduce((acc, odd) => acc * odd, 1) * bet.stakeAmount;
-
-        // Apply bonus multiplier if applicable
-        if (bonusMatched && game.hasBonus) {
-          baseWinning *= 1.5; // 50% bonus multiplier
-        }
-
-        // Apply house edge and daily limits (ONLY ONCE - metadata is stored)
-        const winningResult = gameLogic.calculateWinningAmount(baseWinning, bet.stakeAmount, bet.id);
-        winningAmount = winningResult.finalAmount;
-        houseEdgeApplied = winningResult.metadata.houseEdgeApplied;
-        const singleWinCapApplied = winningResult.metadata.singleWinCapApplied;
-        const dailyCapApplied = winningResult.metadata.dailyCapApplied;
-        limitApplied = singleWinCapApplied || dailyCapApplied;
-
-        // Record payout for daily tracking (even if zero)
-        if (winningAmount > 0 && !bet.isDemo) {
-          gameLogic.recordPayout(winningAmount);
-        }
-
-        const winning = await storage.createWinning({
-          betId: bet.id,
-          resultId: result.id,
-          matchedNumbers,
-          matchedCount,
-          winningAmount,
-        });
-
-        // Update bet outcome with win status and payout
-        await storage.updateBetOutcome(bet.id, 'won', winningAmount, result.id);
-        if (bet.isDemo && bet.demoSessionId && winningAmount > 0) {
-          await storage.adjustDemoWallet(bet.demoSessionId, winningAmount, "winning", bet.id);
-        }
-
-        // Provide clear messaging based on which caps apply
-        let message = undefined;
-        if (singleWinCapApplied && dailyCapApplied) {
-          if (winningAmount === 0) {
-            message = "Congratulations! You matched the winning numbers, but both the maximum single win limit and today's daily payout limit have been reached.";
-          } else {
-            message = "Congratulations! Your winning has been capped by both the maximum single win limit and daily payout limits.";
-          }
-        } else if (dailyCapApplied) {
-          if (winningAmount === 0) {
-            message = "Congratulations! You matched the winning numbers, but today's daily payout limit has been reached. Please check back tomorrow.";
-          } else {
-            message = "Congratulations! Your winning has been capped due to daily payout limits.";
-          }
-        } else if (singleWinCapApplied) {
-          message = "Congratulations! Your winning has been capped due to maximum single win limits.";
-        } else if (houseEdgeApplied) {
-          message = "Congratulations! You won!";
-        }
-
-        return res.json({ 
-          won: true, 
-          winning,
-          bonusMatched,
-          houseEdgeApplied,
-          limitApplied,
-          singleWinCapApplied,
-          dailyCapApplied,
-          message,
-        });
-      }
-
-      // Update bet outcome with lost status
-      await storage.updateBetOutcome(bet.id, 'lost', 0, result.id);
-
-      res.json({ 
-        won: false, 
-        matchedCount,
-        matchedNumbers,
-        bonusMatched,
-        message: `Matched ${matchedCount} numbers, need at least ${game.minMatches} to win` 
-      });
+      res.json(await settleBetAgainstResult(storage, gameLogic, bet, game, result));
     } catch (error) {
       res.status(500).json({ error: "Failed to check winning" });
     }

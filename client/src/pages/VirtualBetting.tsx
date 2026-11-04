@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, TrendingUp, Clock, Zap, Calendar } from 'lucide-react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -15,10 +15,12 @@ import PrintTicket from '@/components/PrintTicket';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { saveTicketId } from '@/lib/tickets';
-import type { Game, Bet, Result } from '@shared/schema';
+import { demoSettlementMessage, type BetPlacementResponse } from '@/lib/bet-response';
+import type { Game, Result } from '@shared/schema';
 
 export default function VirtualBetting() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [stakeAmount, setStakeAmount] = useState(1000);
   const [currentBetId, setCurrentBetId] = useState<string | null>(null);
@@ -92,13 +94,22 @@ export default function VirtualBetting() {
       return await apiRequest('POST', '/api/bets', betData);
     },
     onSuccess: async (response) => {
-      const betResponse = await response.json();
+      const betResponse = await response.json() as BetPlacementResponse;
       setCurrentBetId(betResponse.id);
       saveTicketId(betResponse.id);
+      if (betResponse.demoResult && betResponse.demoOutcome) {
+        setGeneratedResult(betResponse.demoResult);
+        setBetOutcome(betResponse.demoOutcome);
+      }
+      void queryClient.invalidateQueries({ queryKey: ['/api/demo/wallet'] });
       
       toast({
-        title: 'Bet Placed for Virtual Week ' + currentWeek,
-        description: `Your bet will be drawn on Sunday at 6 PM.`,
+        title: betResponse.demoOutcome
+          ? (betResponse.demoOutcome.won ? 'Demo Win Settled' : 'Demo Draw Complete')
+          : `Bet Placed for Virtual Week ${currentWeek}`,
+        description: betResponse.demoOutcome
+          ? demoSettlementMessage(betResponse)
+          : 'Your bet will be drawn on Sunday at 6 PM.',
       });
 
     },
@@ -303,7 +314,7 @@ export default function VirtualBetting() {
                   <CardHeader>
                     <CardTitle className="text-gray-900 dark:text-gray-100">Print Results Ticket</CardTitle>
                     <CardDescription className="text-gray-600 dark:text-gray-400">
-                      Your official results ticket with winning numbers
+                      Your settled ticket with the draw numbers
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -316,7 +327,7 @@ export default function VirtualBetting() {
                 <Card className={betOutcome.won ? 'border-2 border-green-500 bg-green-50 dark:bg-green-950' : 'bg-white dark:bg-gray-800'}>
                   <CardHeader>
                     <CardTitle className={betOutcome.won ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-white'}>
-                      {betOutcome.won ? `🎉 Week ${currentWeek} Winner!` : 'Better Luck Next Week'}
+                      {betOutcome.won ? `Week ${currentWeek} Demo Win` : 'Demo Draw Complete'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>

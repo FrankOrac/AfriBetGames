@@ -6,7 +6,7 @@ import helmet from "helmet";
 import { randomUUID as randomUUID2 } from "node:crypto";
 
 // server/routes.ts
-import { randomInt } from "node:crypto";
+import { randomInt as randomInt2 } from "node:crypto";
 import { z as z2 } from "zod";
 
 // server/storage.ts
@@ -433,7 +433,7 @@ function initialPlatformSettings() {
     communityPostingEnabled: process.env.COMMUNITY_POSTING_ENABLED === "true" && process.env.NODE_ENV !== "production",
     contactSubmissionsEnabled: process.env.PUBLIC_PREVIEW_MODE !== "true" && process.env.NODE_ENV !== "production",
     maintenanceMode: false,
-    demoModeEnabled: false,
+    demoModeEnabled: process.env.DEMO_MODE_ENABLED === "true",
     houseEdgePercentage: Number(process.env.HOUSE_EDGE_PERCENTAGE ?? 15),
     maxDailyPayoutRatio: Number(process.env.MAX_DAILY_PAYOUT_RATIO ?? 0.75),
     maxSingleWinMultiplier: Number(process.env.MAX_SINGLE_WIN_MULTIPLIER ?? 1e3),
@@ -1296,6 +1296,156 @@ function validateResultForGame(result, game) {
   return errors.length > 0 ? { ok: false, errors } : { ok: true, value: result };
 }
 
+// server/demo-betting.ts
+import { randomInt } from "node:crypto";
+var DEMO_WALLET_LIMIT = 1e6;
+function takeRandom(values, count) {
+  const pool = [...values];
+  const picked = [];
+  while (picked.length < count && pool.length > 0) {
+    picked.push(pool.splice(randomInt(0, pool.length), 1)[0]);
+  }
+  return picked;
+}
+function createAutomatedDemoResult(game, bet, forceWin) {
+  if (!bet.isDemo) throw new Error("Automated demo results require a demo ticket");
+  if (bet.gameId !== game.id) throw new Error("Ticket and game do not match");
+  const selectedNumbers = JSON.parse(bet.selectedNumbers);
+  const shouldWin = forceWin ?? randomInt(0, 2) === 1;
+  const selectedMatches = shouldWin ? game.minMatches : Math.max(0, game.minMatches - 1);
+  const winningNumbers = takeRandom(selectedNumbers, selectedMatches);
+  const selectedSet = new Set(selectedNumbers);
+  const availableNumbers = Array.from(
+    { length: game.maxNumber - game.minNumber + 1 },
+    (_, index2) => game.minNumber + index2
+  ).filter((number) => !selectedSet.has(number));
+  winningNumbers.push(...takeRandom(availableNumbers, game.numbersToSelect - winningNumbers.length));
+  const odds = winningNumbers.map(
+    () => randomInt(Math.ceil(game.minOdds * 100), Math.floor(game.maxOdds * 100) + 1) / 100
+  );
+  let bonusNumber;
+  if (game.hasBonus) {
+    const ticketBonus = bet.bonusNumber ?? void 0;
+    const matchBonus = ticketBonus !== void 0 && randomInt(0, 2) === 1;
+    if (matchBonus && !winningNumbers.includes(ticketBonus)) {
+      bonusNumber = ticketBonus;
+    } else {
+      const bonusPool = Array.from(
+        { length: game.maxNumber - game.minNumber + 1 },
+        (_, index2) => game.minNumber + index2
+      ).filter((number) => !winningNumbers.includes(number) && number !== ticketBonus);
+      bonusNumber = takeRandom(bonusPool, 1)[0];
+    }
+  }
+  return {
+    gameId: game.id,
+    drawDate: new Date(Date.now() + 1),
+    winningNumbers,
+    bonusNumber,
+    odds,
+    isDemo: true
+  };
+}
+async function settleBetAgainstResult(storage2, logic, bet, game, result) {
+  if (bet.gameId !== game.id || result.gameId !== game.id) {
+    throw new Error("Ticket, game and result do not match");
+  }
+  if (bet.isDemo !== result.isDemo) {
+    throw new Error("Demo and official settlement modes cannot be mixed");
+  }
+  const selectedNumbers = JSON.parse(bet.selectedNumbers);
+  const winningNumbers = JSON.parse(result.winningNumbers);
+  const odds = JSON.parse(result.odds);
+  const matchedNumbers = Array.from(new Set(selectedNumbers)).filter((number) => winningNumbers.includes(number));
+  const matchedCount = matchedNumbers.length;
+  const bonusMatched = bet.bonusNumber !== null && bet.bonusNumber === result.bonusNumber;
+  const existingWinning = await storage2.getWinningByBet(bet.id);
+  if (existingWinning && matchedCount >= game.minMatches) {
+    const metadata = logic.getWinningMetadata(bet.id);
+    return {
+      won: true,
+      winning: existingWinning,
+      matchedCount,
+      matchedNumbers,
+      bonusMatched,
+      houseEdgeApplied: metadata?.houseEdgeApplied ?? false,
+      limitApplied: (metadata?.singleWinCapApplied ?? false) || (metadata?.dailyCapApplied ?? false),
+      singleWinCapApplied: metadata?.singleWinCapApplied ?? false,
+      dailyCapApplied: metadata?.dailyCapApplied ?? false,
+      demoWalletCapApplied: false,
+      message: bet.isDemo ? "Demo win settled automatically." : "Congratulations! You won!",
+      wallet: bet.isDemo && bet.demoSessionId ? await storage2.getDemoWallet(bet.demoSessionId) : void 0
+    };
+  }
+  if (matchedCount < game.minMatches) {
+    await storage2.updateBetOutcome(bet.id, "lost", 0, result.id);
+    return {
+      won: false,
+      matchedCount,
+      matchedNumbers,
+      bonusMatched,
+      houseEdgeApplied: false,
+      limitApplied: false,
+      singleWinCapApplied: false,
+      dailyCapApplied: false,
+      demoWalletCapApplied: false,
+      message: bet.isDemo ? `Demo draw complete. Matched ${matchedCount}; ${game.minMatches} required to win.` : `Matched ${matchedCount} numbers; ${game.minMatches} required to win.`,
+      wallet: bet.isDemo && bet.demoSessionId ? await storage2.getDemoWallet(bet.demoSessionId) : void 0
+    };
+  }
+  const matchedOdds = matchedNumbers.map((number) => {
+    const index2 = winningNumbers.indexOf(number);
+    return odds[index2] || 1;
+  });
+  let baseWinning = matchedOdds.reduce((total, odd) => total * odd, 1) * bet.stakeAmount;
+  if (bonusMatched && game.hasBonus) baseWinning *= 1.5;
+  const winningResult = logic.calculateWinningAmount(baseWinning, bet.stakeAmount, bet.id);
+  let winningAmount = winningResult.finalAmount;
+  let demoWalletCapApplied = false;
+  let wallet;
+  if (bet.isDemo && bet.demoSessionId) {
+    wallet = await storage2.getDemoWallet(bet.demoSessionId);
+    const availableWalletCapacity = Math.max(0, DEMO_WALLET_LIMIT - wallet.balance);
+    if (winningAmount > availableWalletCapacity) {
+      winningAmount = availableWalletCapacity;
+      demoWalletCapApplied = true;
+    }
+  }
+  const winning = await storage2.createWinning({
+    betId: bet.id,
+    resultId: result.id,
+    matchedNumbers,
+    matchedCount,
+    winningAmount
+  });
+  if (bet.isDemo && bet.demoSessionId && winningAmount > 0) {
+    wallet = await storage2.adjustDemoWallet(bet.demoSessionId, winningAmount, "winning", bet.id);
+    if (!wallet) throw new Error("Unable to credit the demo payout");
+  } else if (!bet.isDemo && winningAmount > 0) {
+    logic.recordPayout(winningAmount);
+  }
+  await storage2.updateBetOutcome(bet.id, "won", winningAmount, result.id);
+  const singleWinCapApplied = winningResult.metadata.singleWinCapApplied;
+  const dailyCapApplied = winningResult.metadata.dailyCapApplied;
+  let message = bet.isDemo ? "Demo win settled automatically." : "Congratulations! You won!";
+  if (demoWalletCapApplied) message = "Demo win settled at the \u20A61,000,000 demo-wallet limit.";
+  else if (singleWinCapApplied) message = "Win settled at the maximum single-ticket payout.";
+  return {
+    won: true,
+    winning,
+    matchedCount,
+    matchedNumbers,
+    bonusMatched,
+    houseEdgeApplied: winningResult.metadata.houseEdgeApplied,
+    limitApplied: singleWinCapApplied || dailyCapApplied || demoWalletCapApplied,
+    singleWinCapApplied,
+    dailyCapApplied,
+    demoWalletCapApplied,
+    message,
+    wallet
+  };
+}
+
 // server/routes.ts
 async function registerRoutes(app) {
   const publicPreviewMode = process.env.PUBLIC_PREVIEW_MODE === "true";
@@ -1413,9 +1563,10 @@ async function registerRoutes(app) {
         baseMaxWinning,
         gameLogic.getConfig().maxSingleWinMultiplier * gameValidation.value.stakeAmount
       );
+      let demoWallet;
       if (isDemo) {
-        const wallet = await storage.adjustDemoWallet(demoSessionId, -gameValidation.value.stakeAmount, "stake");
-        if (!wallet) return res.status(409).json({ error: "Insufficient demo balance. Add demo funds and try again." });
+        demoWallet = await storage.adjustDemoWallet(demoSessionId, -gameValidation.value.stakeAmount, "stake");
+        if (!demoWallet) return res.status(409).json({ error: "Insufficient demo balance. Add demo funds and try again." });
       }
       let bet;
       try {
@@ -1428,6 +1579,22 @@ async function registerRoutes(app) {
       } catch (error) {
         if (isDemo) await storage.adjustDemoWallet(demoSessionId, gameValidation.value.stakeAmount, "refund");
         throw error;
+      }
+      if (isDemo) {
+        try {
+          const demoResult = await storage.createResult(createAutomatedDemoResult(game, bet));
+          const demoOutcome = await settleBetAgainstResult(storage, gameLogic, bet, game, demoResult);
+          demoWallet = demoOutcome.wallet ?? await storage.getDemoWallet(demoSessionId);
+          const settledBet = await storage.getBet(bet.id) ?? bet;
+          return res.status(201).json({ ...settledBet, demoResult, demoOutcome, demoWallet });
+        } catch (error) {
+          const currentBet = await storage.getBet(bet.id);
+          if (currentBet?.status === "pending") {
+            await storage.adjustDemoWallet(demoSessionId, gameValidation.value.stakeAmount, "refund", bet.id);
+            await storage.updateBetOutcome(bet.id, "voided", 0, null);
+          }
+          throw error;
+        }
       }
       res.status(201).json(bet);
     } catch (error) {
@@ -1526,122 +1693,11 @@ async function registerRoutes(app) {
       if (!result) {
         return res.status(404).json({ error: "No results available for this game yet" });
       }
-      const selectedNumbers = JSON.parse(bet.selectedNumbers);
-      const winningNumbers = JSON.parse(result.winningNumbers);
-      const odds = JSON.parse(result.odds);
-      const uniqueSelectedNumbers = Array.from(new Set(selectedNumbers));
-      const matchedNumbers = uniqueSelectedNumbers.filter((num) => winningNumbers.includes(num));
-      const matchedCount = matchedNumbers.length;
-      const bonusMatched = bet.bonusNumber !== null && bet.bonusNumber === result.bonusNumber;
       const game = await storage.getGame(bet.gameId);
       if (!game) {
         return res.status(404).json({ error: "Game not found" });
       }
-      const existingWinning = await storage.getWinningByBet(bet.id);
-      if (existingWinning && matchedCount >= game.minMatches) {
-        const metadata = gameLogic.getWinningMetadata(bet.id);
-        const houseEdgeApplied2 = metadata?.houseEdgeApplied ?? false;
-        const singleWinCapApplied = metadata?.singleWinCapApplied ?? false;
-        const dailyCapApplied = metadata?.dailyCapApplied ?? false;
-        const limitApplied2 = singleWinCapApplied || dailyCapApplied;
-        let message = void 0;
-        if (singleWinCapApplied && dailyCapApplied) {
-          if (existingWinning.winningAmount === 0) {
-            message = "Congratulations! You matched the winning numbers, but both the maximum single win limit and today's daily payout limit have been reached.";
-          } else {
-            message = "Congratulations! Your winning has been capped by both the maximum single win limit and daily payout limits.";
-          }
-        } else if (dailyCapApplied) {
-          if (existingWinning.winningAmount === 0) {
-            message = "Congratulations! You matched the winning numbers, but today's daily payout limit has been reached. Please check back tomorrow.";
-          } else {
-            message = "Congratulations! Your winning has been capped due to daily payout limits.";
-          }
-        } else if (singleWinCapApplied) {
-          message = "Congratulations! Your winning has been capped due to maximum single win limits.";
-        } else if (houseEdgeApplied2) {
-          message = "Congratulations! You won!";
-        }
-        return res.json({
-          won: true,
-          winning: existingWinning,
-          bonusMatched,
-          houseEdgeApplied: houseEdgeApplied2,
-          limitApplied: limitApplied2,
-          singleWinCapApplied,
-          dailyCapApplied,
-          message
-        });
-      }
-      let winningAmount = 0;
-      let houseEdgeApplied = false;
-      let limitApplied = false;
-      if (matchedCount >= game.minMatches) {
-        const matchedOdds = matchedNumbers.map((num) => {
-          const index2 = winningNumbers.indexOf(num);
-          return odds[index2] || 1;
-        });
-        let baseWinning = matchedOdds.reduce((acc, odd) => acc * odd, 1) * bet.stakeAmount;
-        if (bonusMatched && game.hasBonus) {
-          baseWinning *= 1.5;
-        }
-        const winningResult = gameLogic.calculateWinningAmount(baseWinning, bet.stakeAmount, bet.id);
-        winningAmount = winningResult.finalAmount;
-        houseEdgeApplied = winningResult.metadata.houseEdgeApplied;
-        const singleWinCapApplied = winningResult.metadata.singleWinCapApplied;
-        const dailyCapApplied = winningResult.metadata.dailyCapApplied;
-        limitApplied = singleWinCapApplied || dailyCapApplied;
-        if (winningAmount > 0 && !bet.isDemo) {
-          gameLogic.recordPayout(winningAmount);
-        }
-        const winning = await storage.createWinning({
-          betId: bet.id,
-          resultId: result.id,
-          matchedNumbers,
-          matchedCount,
-          winningAmount
-        });
-        await storage.updateBetOutcome(bet.id, "won", winningAmount, result.id);
-        if (bet.isDemo && bet.demoSessionId && winningAmount > 0) {
-          await storage.adjustDemoWallet(bet.demoSessionId, winningAmount, "winning", bet.id);
-        }
-        let message = void 0;
-        if (singleWinCapApplied && dailyCapApplied) {
-          if (winningAmount === 0) {
-            message = "Congratulations! You matched the winning numbers, but both the maximum single win limit and today's daily payout limit have been reached.";
-          } else {
-            message = "Congratulations! Your winning has been capped by both the maximum single win limit and daily payout limits.";
-          }
-        } else if (dailyCapApplied) {
-          if (winningAmount === 0) {
-            message = "Congratulations! You matched the winning numbers, but today's daily payout limit has been reached. Please check back tomorrow.";
-          } else {
-            message = "Congratulations! Your winning has been capped due to daily payout limits.";
-          }
-        } else if (singleWinCapApplied) {
-          message = "Congratulations! Your winning has been capped due to maximum single win limits.";
-        } else if (houseEdgeApplied) {
-          message = "Congratulations! You won!";
-        }
-        return res.json({
-          won: true,
-          winning,
-          bonusMatched,
-          houseEdgeApplied,
-          limitApplied,
-          singleWinCapApplied,
-          dailyCapApplied,
-          message
-        });
-      }
-      await storage.updateBetOutcome(bet.id, "lost", 0, result.id);
-      res.json({
-        won: false,
-        matchedCount,
-        matchedNumbers,
-        bonusMatched,
-        message: `Matched ${matchedCount} numbers, need at least ${game.minMatches} to win`
-      });
+      res.json(await settleBetAgainstResult(storage, gameLogic, bet, game, result));
     } catch (error) {
       res.status(500).json({ error: "Failed to check winning" });
     }
@@ -1666,18 +1722,18 @@ async function registerRoutes(app) {
       }
       const winningNumbers = [];
       while (winningNumbers.length < game.numbersToSelect) {
-        const randomNum = randomInt(game.minNumber, game.maxNumber + 1);
+        const randomNum = randomInt2(game.minNumber, game.maxNumber + 1);
         if (!winningNumbers.includes(randomNum)) {
           winningNumbers.push(randomNum);
         }
       }
       const odds = winningNumbers.map(
-        () => randomInt(Math.ceil(game.minOdds * 100), Math.floor(game.maxOdds * 100) + 1) / 100
+        () => randomInt2(Math.ceil(game.minOdds * 100), Math.floor(game.maxOdds * 100) + 1) / 100
       );
       let bonusNumber;
       if (game.hasBonus) {
         do {
-          bonusNumber = randomInt(game.minNumber, game.maxNumber + 1);
+          bonusNumber = randomInt2(game.minNumber, game.maxNumber + 1);
         } while (winningNumbers.includes(bonusNumber));
       }
       const result = await storage.createResult({

@@ -95,7 +95,7 @@ export function initialPlatformSettings(): InsertPlatformSettings {
     communityPostingEnabled: process.env.COMMUNITY_POSTING_ENABLED === "true" && process.env.NODE_ENV !== "production",
     contactSubmissionsEnabled: process.env.PUBLIC_PREVIEW_MODE !== "true" && process.env.NODE_ENV !== "production",
     maintenanceMode: false,
-    demoModeEnabled: false,
+    demoModeEnabled: process.env.DEMO_MODE_ENABLED === "true",
     houseEdgePercentage: Number(process.env.HOUSE_EDGE_PERCENTAGE ?? 15),
     maxDailyPayoutRatio: Number(process.env.MAX_DAILY_PAYOUT_RATIO ?? 0.75),
     maxSingleWinMultiplier: Number(process.env.MAX_SINGLE_WIN_MULTIPLIER ?? 1000),

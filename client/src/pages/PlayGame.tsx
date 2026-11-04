@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check, Clock } from 'lucide-react';
+import { ArrowLeft, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import NumberSelector from '@/components/NumberSelector';
@@ -14,11 +13,10 @@ import PrintTicket from '@/components/PrintTicket';
 import { useToast } from '@/hooks/use-toast';
 import { saveTicketId } from '@/lib/tickets';
 import { demoHeaders } from '@/lib/demo';
-import type { Game, Bet, Result } from '@shared/schema';
+import { demoSettlementMessage, type BetPlacementResponse } from '@/lib/bet-response';
+import type { Game, Result } from '@shared/schema';
 
 const VIRTUAL_GAME_TYPES = ['virtual', 'aviator', 'lucky_numbers', 'super_virtual'];
-const COUNTDOWN_SECONDS = 10;
-
 export default function PlayGame() {
   const [, params] = useRoute('/play/:gameType');
   const [, setLocation] = useLocation();
@@ -28,7 +26,6 @@ export default function PlayGame() {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [bonusNumber, setBonusNumber] = useState<number | undefined>();
   const [stakeAmount, setStakeAmount] = useState(1000);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [currentBetId, setCurrentBetId] = useState<string | null>(null);
   const [generatedResult, setGeneratedResult] = useState<Result | null>(null);
   const [betOutcome, setBetOutcome] = useState<any | null>(null);
@@ -69,17 +66,21 @@ export default function PlayGame() {
         throw new Error(typeof payload.error === 'string' ? payload.error : 'Failed to place bet');
       }
 
-      return await response.json() as Bet;
+      return await response.json() as BetPlacementResponse;
     },
     onSuccess: (data) => {
       saveTicketId(data.id);
       setCurrentBetId(data.id);
+      if (data.demoResult && data.demoOutcome) {
+        setGeneratedResult(data.demoResult);
+        setBetOutcome(data.demoOutcome);
+      }
       void queryClient.invalidateQueries({ queryKey: ['/api/demo/wallet'] });
       toast({
-        title: 'Bet Placed Successfully!',
-        description: data.isDemo
-          ? 'Demo ticket saved. Generate a demo draw from the admin dashboard, then check it on My Tickets.'
-          : 'Ticket saved. Results will be settled after the official draw.',
+        title: data.demoOutcome
+          ? (data.demoOutcome.won ? 'Demo Win Settled' : 'Demo Draw Complete')
+          : 'Ticket Placed Successfully',
+        description: demoSettlementMessage(data),
       });
     },
     onError: (error) => {
@@ -156,33 +157,13 @@ export default function PlayGame() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2 space-y-4">
-              {countdown !== null && countdown >= 0 && (
-                <Card className="p-4 bg-primary/5 border-primary/20">
-                  <div className="text-center space-y-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <Clock className="w-8 h-8 text-primary animate-pulse" />
-                      <h2 className="font-display font-bold text-2xl text-primary">
-                        {countdown}s
-                      </h2>
-                    </div>
-                    <p className="text-lg font-medium">
-                      {countdown > 0 ? 'Generating results...' : 'Calculating winnings...'}
-                    </p>
-                    <Progress 
-                      value={((COUNTDOWN_SECONDS - countdown) / COUNTDOWN_SECONDS) * 100} 
-                      className="h-2"
-                    />
-                  </div>
-                </Card>
-              )}
-
-              {generatedResult && countdown === null && (
+              {generatedResult && (
                 <>
                   {betOutcome && (
                     <Card className={`p-6 ${betOutcome.won ? 'bg-green-500/10 dark:bg-green-500/20 border-green-500/50' : 'bg-red-500/10 dark:bg-red-500/20 border-red-500/50'}`}>
                       <div className="text-center space-y-3">
                         <h2 className="font-display font-bold text-3xl">
-                          {betOutcome.won ? '🎉 You Won!' : '😔 Better Luck Next Time'}
+                          {betOutcome.won ? 'Demo Win' : 'Demo Draw Complete'}
                         </h2>
                         {betOutcome.won && betOutcome.winning && (
                           <p className="text-2xl font-bold">
@@ -212,7 +193,7 @@ export default function PlayGame() {
                     <div className="space-y-4">
                       <div className="text-center">
                         <h2 className="font-display font-bold text-2xl mb-2">
-                          🎲 Results Are In!
+                          Draw Result
                         </h2>
                         <p className="text-muted-foreground">
                           Game Draw: {new Date(generatedResult.drawDate).toLocaleString()}
@@ -274,7 +255,7 @@ export default function PlayGame() {
                     <h1 className="font-display font-bold text-2xl">{game.name}</h1>
                     <p className="text-sm text-muted-foreground">{game.description}</p>
                     <p className="text-sm text-primary font-medium mt-1">
-                      Results are settled only from a published draw that matches the ticket mode.
+                      Demo tickets settle automatically. Real tickets settle only from the matching published draw.
                     </p>
                   </div>
                 </div>
@@ -299,7 +280,7 @@ export default function PlayGame() {
                 </div>
               </Card>
 
-              {!generatedResult && countdown === null && (
+              {!generatedResult && (
                 <Card className="p-4">
                   <NumberSelector
                     minNumber={game.minNumber}
@@ -318,7 +299,7 @@ export default function PlayGame() {
             </div>
 
             <div className="space-y-4">
-              {!generatedResult && countdown === null && (
+              {!generatedResult && (
                 <>
                   <StakeInput
                     onStakeChange={setStakeAmount}

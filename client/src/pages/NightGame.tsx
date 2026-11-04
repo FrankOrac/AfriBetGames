@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Moon, Clock, Zap } from 'lucide-react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -14,10 +14,12 @@ import PrintTicket from '@/components/PrintTicket';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { saveTicketId } from '@/lib/tickets';
-import type { Game, Bet, Result } from '@shared/schema';
+import { demoSettlementMessage, type BetPlacementResponse } from '@/lib/bet-response';
+import type { Game, Result } from '@shared/schema';
 
 export default function NightGame() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [bonusNumber, setBonusNumber] = useState<number | undefined>();
   const [stakeAmount, setStakeAmount] = useState(1000);
@@ -75,13 +77,22 @@ export default function NightGame() {
       return await apiRequest('POST', '/api/bets', betData);
     },
     onSuccess: async (response) => {
-      const betResponse = await response.json();
+      const betResponse = await response.json() as BetPlacementResponse;
       setCurrentBetId(betResponse.id);
       saveTicketId(betResponse.id);
+      if (betResponse.demoResult && betResponse.demoOutcome) {
+        setGeneratedResult(betResponse.demoResult);
+        setBetOutcome(betResponse.demoOutcome);
+      }
+      void queryClient.invalidateQueries({ queryKey: ['/api/demo/wallet'] });
       
       toast({
-        title: 'Bet Placed Successfully!',
-        description: `Your Night Game bet has been placed. Draw at 12:00 AM.`,
+        title: betResponse.demoOutcome
+          ? (betResponse.demoOutcome.won ? 'Demo Win Settled' : 'Demo Draw Complete')
+          : 'Ticket Placed Successfully',
+        description: betResponse.demoOutcome
+          ? demoSettlementMessage(betResponse)
+          : 'Your Night Game ticket has been placed for the 12:00 AM draw.',
       });
 
     },
@@ -263,7 +274,7 @@ export default function NightGame() {
                   <CardHeader>
                     <CardTitle className="text-gray-900 dark:text-gray-100">Print Results Ticket</CardTitle>
                     <CardDescription className="text-gray-600 dark:text-gray-400">
-                      Your official results ticket with winning numbers
+                      Your settled ticket with the draw numbers
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -276,7 +287,7 @@ export default function NightGame() {
                 <Card className={betOutcome.won ? 'border-2 border-green-500 bg-green-50 dark:bg-green-950' : 'bg-white dark:bg-gray-800'}>
                   <CardHeader>
                     <CardTitle className={betOutcome.won ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-white'}>
-                      {betOutcome.won ? '🎉 Congratulations! You Won!' : 'Better Luck Next Time'}
+                      {betOutcome.won ? 'Demo Win' : 'Demo Draw Complete'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
