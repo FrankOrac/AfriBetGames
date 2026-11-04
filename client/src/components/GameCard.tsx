@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { LucideIcon } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useState } from 'react';
-import { Link } from 'wouter';
 
 interface GameCardProps {
   title: string;
@@ -163,19 +162,15 @@ export default function GameCard({
               ))}
             </motion.div>
 
-            <motion.div
-              style={{ transform: "translateZ(25px)" }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
+            <div className="relative z-20">
               <Button
                 asChild
                 className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/30" 
                 data-testid={`button-play-${title.toLowerCase().replace(/\s+/g, '-')}`}
               >
-                <Link href={href}>Play {title}</Link>
+                <a href={href}>Play {title}</a>
               </Button>
-            </motion.div>
+            </div>
           </motion.div>
         </Card>
       </motion.div>
