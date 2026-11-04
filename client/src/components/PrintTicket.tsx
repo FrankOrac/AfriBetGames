@@ -233,6 +233,25 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
         margin: 8px 0;
         color: #1e293b;
       }
+      .criteria-box {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 10px;
+        margin: 10px 0;
+      }
+      .criteria-title {
+        color: #166534;
+        font-size: 11px;
+        font-weight: 800;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+      }
+      .criteria-line {
+        color: #334155;
+        font-size: 10px;
+        line-height: 1.5;
+      }
       .barcode-sim {
         font-family: 'Libre Barcode 128', monospace;
         font-size: 32px;
@@ -269,6 +288,7 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
   const isPending = ticket.status === 'pending';
   const isWinner = ticket.status === 'won';
   const shortCode = ticket.ticketId.slice(0, 8).toUpperCase();
+  const criteria = ticket.winCriteria;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -278,30 +298,30 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
           {isPending ? 'Print Betting Slip' : 'Print Results Ticket'}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-display flex items-center gap-2">
+      <DialogContent className="max-h-[82dvh] w-[calc(100vw-2rem)] max-w-md grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-lg p-0 sm:max-w-lg">
+        <DialogHeader className="border-b px-4 py-3 pr-12 text-left">
+          <DialogTitle className="flex items-center gap-2 text-lg">
             {isPending ? (
               <>
-                <FileText className="w-6 h-6 text-yellow-600" />
+                <FileText className="h-5 w-5 text-yellow-600" />
                 Betting Slip Preview
               </>
             ) : (
               <>
-                <FileText className="w-6 h-6 text-green-600" />
+                <FileText className="h-5 w-5 text-green-600" />
                 Results Ticket Preview
               </>
             )}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             {isPending 
               ? 'Review your bet details below. Click Print or Save PDF to keep a copy.' 
               : 'Your results ticket. Print or save it for your records.'}
           </DialogDescription>
         </DialogHeader>
         
-        <div className="my-4 border rounded-lg p-4 bg-muted/30">
-          <div id="ticket-content" className="bg-white rounded-lg shadow-lg mx-auto p-5" style={{ maxWidth: '380px' }}>
+        <div className="min-h-0 overflow-y-auto bg-muted/30 px-3 py-3 sm:px-4">
+          <div className="ticket-preview mx-auto max-w-[350px] rounded-md border bg-white p-4 text-black shadow-sm" id="ticket-content">
             <div className="ticket">
             {/* Header */}
             <div className="header">
@@ -335,6 +355,27 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
                 </span>
               </div>
             </div>
+
+            <div className="divider"></div>
+
+            {/* Winning criteria are printed on every ticket. */}
+            {criteria && (
+              <div className="criteria-box">
+                <div className="criteria-title">How this ticket wins</div>
+                <div className="criteria-line">
+                  Pick {criteria.numbersToSelect} unique number{criteria.numbersToSelect === 1 ? '' : 's'} from {criteria.minNumber}–{criteria.maxNumber}.
+                </div>
+                <div className="criteria-line">
+                  Match at least {criteria.minMatches} number{criteria.minMatches === 1 ? '' : 's'} to win.
+                </div>
+                <div className="criteria-line">
+                  Published odds: {criteria.minOdds}x–{criteria.maxOdds}x.
+                </div>
+                {criteria.hasBonus && (
+                  <div className="criteria-line">A matching bonus number adds the disclosed bonus multiplier.</div>
+                )}
+              </div>
+            )}
 
             <div className="divider"></div>
 
@@ -524,17 +565,17 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
         </div>
         </div>
 
-        <div className="border-t pt-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
+        <div className="space-y-2 border-t bg-background p-3">
+          <p className="text-xs text-muted-foreground">
             {isPending 
               ? 'Keep this betting slip safe. You\'ll need it to claim your winnings if you win.'
               : 'This ticket contains the published result linked to this reference. Save it for your records.'}
           </p>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <Button 
               onClick={handlePrint} 
               className="flex-1" 
-              size="lg"
+              size="sm"
               data-testid="button-confirm-print"
             >
               <Printer className="w-4 h-4 mr-2" />
@@ -544,7 +585,7 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
               onClick={handlePrint} 
               variant="outline"
               className="flex-1" 
-              size="lg"
+              size="sm"
               data-testid="button-download-pdf"
             >
               <Download className="w-4 h-4 mr-2" />

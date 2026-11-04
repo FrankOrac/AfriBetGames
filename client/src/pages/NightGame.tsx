@@ -11,7 +11,9 @@ import NumberSelector from '@/components/NumberSelector';
 import StakeInput from '@/components/StakeInput';
 import WinningsCalculator from '@/components/WinningsCalculator';
 import PrintTicket from '@/components/PrintTicket';
+import DemoResultCountdown from '@/components/DemoResultCountdown';
 import { useToast } from '@/hooks/use-toast';
+import { useDemoResultReveal } from '@/hooks/use-demo-result-reveal';
 import { apiRequest } from '@/lib/queryClient';
 import { saveTicketId } from '@/lib/tickets';
 import { demoSettlementMessage, type BetPlacementResponse } from '@/lib/bet-response';
@@ -20,6 +22,7 @@ import type { Game, Result } from '@shared/schema';
 export default function NightGame() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { countdown, revealAfterCountdown, cancelReveal } = useDemoResultReveal();
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [bonusNumber, setBonusNumber] = useState<number | undefined>();
   const [stakeAmount, setStakeAmount] = useState(1000);
@@ -81,18 +84,23 @@ export default function NightGame() {
       setCurrentBetId(betResponse.id);
       saveTicketId(betResponse.id);
       if (betResponse.demoResult && betResponse.demoOutcome) {
-        setGeneratedResult(betResponse.demoResult);
-        setBetOutcome(betResponse.demoOutcome);
+        toast({ title: 'Demo Ticket Accepted', description: 'The draw result will be revealed in 5 seconds.' });
+        revealAfterCountdown(() => {
+          setGeneratedResult(betResponse.demoResult!);
+          setBetOutcome(betResponse.demoOutcome!);
+          void queryClient.invalidateQueries({ queryKey: ['/api/demo/wallet'] });
+          toast({
+            title: betResponse.demoOutcome!.won ? 'Demo Win Settled' : 'Demo Draw Complete',
+            description: demoSettlementMessage(betResponse),
+          });
+        });
+        return;
       }
       void queryClient.invalidateQueries({ queryKey: ['/api/demo/wallet'] });
       
       toast({
-        title: betResponse.demoOutcome
-          ? (betResponse.demoOutcome.won ? 'Demo Win Settled' : 'Demo Draw Complete')
-          : 'Ticket Placed Successfully',
-        description: betResponse.demoOutcome
-          ? demoSettlementMessage(betResponse)
-          : 'Your Night Game ticket has been placed for the 12:00 AM draw.',
+        title: 'Ticket Placed Successfully',
+        description: 'Your Night Game ticket has been placed for the 12:00 AM draw.',
       });
 
     },
@@ -130,6 +138,7 @@ export default function NightGame() {
   };
 
   const handleReset = () => {
+    cancelReveal();
     setSelectedNumbers([]);
     setBonusNumber(undefined);
     setCurrentBetId(null);
@@ -200,6 +209,8 @@ export default function NightGame() {
             </CardContent>
           </Card>
 
+          {countdown !== null && <DemoResultCountdown seconds={countdown} />}
+
           {!currentBetId && !generatedResult ? (
             <div className="grid gap-4">
               <Card className="bg-white dark:bg-gray-800">
@@ -252,7 +263,7 @@ export default function NightGame() {
             </div>
           ) : (
             <div className="space-y-6">
-              {currentBetId && !generatedResult && (
+              {currentBetId && !generatedResult && countdown === null && (
                 <Card className="bg-indigo-50 dark:bg-indigo-950 border-2 border-indigo-500">
                   <CardHeader>
                     <CardTitle className="text-indigo-900 dark:text-indigo-100">✓ Bet Placed Successfully!</CardTitle>

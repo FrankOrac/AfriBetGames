@@ -1860,6 +1860,15 @@ async function registerRoutes(app) {
         isDemo: bet.isDemo,
         gameName: game.name,
         gameType: game.type,
+        winCriteria: {
+          minNumber: game.minNumber,
+          maxNumber: game.maxNumber,
+          numbersToSelect: game.numbersToSelect,
+          minMatches: game.minMatches,
+          hasBonus: game.hasBonus,
+          minOdds: game.minOdds,
+          maxOdds: game.maxOdds
+        },
         selectedNumbers: JSON.parse(bet.selectedNumbers),
         bonusNumber: bet.bonusNumber,
         stakeAmount: bet.stakeAmount,

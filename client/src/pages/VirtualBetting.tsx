@@ -12,7 +12,9 @@ import NumberSelector from '@/components/NumberSelector';
 import StakeInput from '@/components/StakeInput';
 import WinningsCalculator from '@/components/WinningsCalculator';
 import PrintTicket from '@/components/PrintTicket';
+import DemoResultCountdown from '@/components/DemoResultCountdown';
 import { useToast } from '@/hooks/use-toast';
+import { useDemoResultReveal } from '@/hooks/use-demo-result-reveal';
 import { apiRequest } from '@/lib/queryClient';
 import { saveTicketId } from '@/lib/tickets';
 import { demoSettlementMessage, type BetPlacementResponse } from '@/lib/bet-response';
@@ -21,6 +23,7 @@ import type { Game, Result } from '@shared/schema';
 export default function VirtualBetting() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { countdown, revealAfterCountdown, cancelReveal } = useDemoResultReveal();
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [stakeAmount, setStakeAmount] = useState(1000);
   const [currentBetId, setCurrentBetId] = useState<string | null>(null);
@@ -98,18 +101,23 @@ export default function VirtualBetting() {
       setCurrentBetId(betResponse.id);
       saveTicketId(betResponse.id);
       if (betResponse.demoResult && betResponse.demoOutcome) {
-        setGeneratedResult(betResponse.demoResult);
-        setBetOutcome(betResponse.demoOutcome);
+        toast({ title: 'Demo Ticket Accepted', description: 'The draw result will be revealed in 5 seconds.' });
+        revealAfterCountdown(() => {
+          setGeneratedResult(betResponse.demoResult!);
+          setBetOutcome(betResponse.demoOutcome!);
+          void queryClient.invalidateQueries({ queryKey: ['/api/demo/wallet'] });
+          toast({
+            title: betResponse.demoOutcome!.won ? 'Demo Win Settled' : 'Demo Draw Complete',
+            description: demoSettlementMessage(betResponse),
+          });
+        });
+        return;
       }
       void queryClient.invalidateQueries({ queryKey: ['/api/demo/wallet'] });
       
       toast({
-        title: betResponse.demoOutcome
-          ? (betResponse.demoOutcome.won ? 'Demo Win Settled' : 'Demo Draw Complete')
-          : `Bet Placed for Virtual Week ${currentWeek}`,
-        description: betResponse.demoOutcome
-          ? demoSettlementMessage(betResponse)
-          : 'Your bet will be drawn on Sunday at 6 PM.',
+        title: `Bet Placed for Virtual Week ${currentWeek}`,
+        description: 'Your bet will be drawn on Sunday at 6 PM.',
       });
 
     },
@@ -140,6 +148,7 @@ export default function VirtualBetting() {
   };
 
   const handleReset = () => {
+    cancelReveal();
     setSelectedNumbers([]);
     setCurrentBetId(null);
     setGeneratedResult(null);
@@ -230,6 +239,8 @@ export default function VirtualBetting() {
             </CardContent>
           </Card>
 
+          {countdown !== null && <DemoResultCountdown seconds={countdown} />}
+
           {!currentBetId && !generatedResult ? (
             <div className="grid gap-4">
               <Card className="bg-white dark:bg-gray-800">
@@ -292,7 +303,7 @@ export default function VirtualBetting() {
             </div>
           ) : (
             <div className="space-y-6">
-              {currentBetId && !generatedResult && (
+              {currentBetId && !generatedResult && countdown === null && (
                 <Card className="bg-blue-50 dark:bg-blue-950 border-2 border-blue-500">
                   <CardHeader>
                     <CardTitle className="text-blue-900 dark:text-blue-100">✓ Bet Placed Successfully!</CardTitle>

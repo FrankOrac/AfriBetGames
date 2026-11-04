@@ -10,7 +10,9 @@ import NumberSelector from '@/components/NumberSelector';
 import StakeInput from '@/components/StakeInput';
 import WinningsCalculator from '@/components/WinningsCalculator';
 import PrintTicket from '@/components/PrintTicket';
+import DemoResultCountdown from '@/components/DemoResultCountdown';
 import { useToast } from '@/hooks/use-toast';
+import { useDemoResultReveal } from '@/hooks/use-demo-result-reveal';
 import { saveTicketId } from '@/lib/tickets';
 import { demoHeaders } from '@/lib/demo';
 import { demoSettlementMessage, type BetPlacementResponse } from '@/lib/bet-response';
@@ -22,6 +24,7 @@ export default function PlayGame() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { countdown, revealAfterCountdown, cancelReveal } = useDemoResultReveal();
 
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [bonusNumber, setBonusNumber] = useState<number | undefined>();
@@ -72,15 +75,22 @@ export default function PlayGame() {
       saveTicketId(data.id);
       setCurrentBetId(data.id);
       if (data.demoResult && data.demoOutcome) {
-        setGeneratedResult(data.demoResult);
-        setBetOutcome(data.demoOutcome);
+        toast({ title: 'Demo Ticket Accepted', description: 'The draw result will be revealed in 5 seconds.' });
+        revealAfterCountdown(() => {
+          setGeneratedResult(data.demoResult!);
+          setBetOutcome(data.demoOutcome!);
+          void queryClient.invalidateQueries({ queryKey: ['/api/demo/wallet'] });
+          toast({
+            title: data.demoOutcome!.won ? 'Demo Win Settled' : 'Demo Draw Complete',
+            description: demoSettlementMessage(data),
+          });
+        });
+        return;
       }
       void queryClient.invalidateQueries({ queryKey: ['/api/demo/wallet'] });
       toast({
-        title: data.demoOutcome
-          ? (data.demoOutcome.won ? 'Demo Win Settled' : 'Demo Draw Complete')
-          : 'Ticket Placed Successfully',
-        description: demoSettlementMessage(data),
+        title: 'Ticket Placed Successfully',
+        description: 'Ticket saved. Results will be settled after the official draw.',
       });
     },
     onError: (error) => {
@@ -157,6 +167,8 @@ export default function PlayGame() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2 space-y-4">
+              {countdown !== null && <DemoResultCountdown seconds={countdown} />}
+
               {generatedResult && (
                 <>
                   {betOutcome && (
@@ -229,6 +241,7 @@ export default function PlayGame() {
                         <Button
                           className="flex-1"
                           onClick={() => {
+                            cancelReveal();
                             setGeneratedResult(null);
                             setCurrentBetId(null);
                             setBetOutcome(null);
@@ -280,7 +293,7 @@ export default function PlayGame() {
                 </div>
               </Card>
 
-              {!generatedResult && (
+              {!generatedResult && countdown === null && (
                 <Card className="p-4">
                   <NumberSelector
                     minNumber={game.minNumber}
@@ -299,7 +312,7 @@ export default function PlayGame() {
             </div>
 
             <div className="space-y-4">
-              {!generatedResult && (
+              {!generatedResult && countdown === null && (
                 <>
                   <StakeInput
                     onStakeChange={setStakeAmount}
@@ -339,7 +352,7 @@ export default function PlayGame() {
                 </>
               )}
 
-              {(currentBetId || generatedResult) && (
+              {(currentBetId || generatedResult) && countdown === null && (
                 <Card className="p-4">
                   <div className="text-center space-y-3">
                     <p className="text-sm text-muted-foreground">Your Bet</p>

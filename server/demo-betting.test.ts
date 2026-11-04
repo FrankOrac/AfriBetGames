@@ -98,4 +98,12 @@ test("placing a demo bet automatically creates and settles its draw", async (con
   };
   assert.ok(ticket.status === "won" || ticket.status === "lost");
   assert.equal(ticket.resultId, payload.demoResult?.id);
+
+  const printableTicket = await fetch(`${baseUrl}/api/bets/${payload.id}/ticket`).then((response) => response.json()) as {
+    winCriteria?: { numbersToSelect: number; minMatches: number; minNumber: number; maxNumber: number };
+  };
+  assert.equal(printableTicket.winCriteria?.numbersToSelect, game.numbersToSelect);
+  assert.equal(printableTicket.winCriteria?.minNumber, game.minNumber);
+  assert.ok((printableTicket.winCriteria?.minMatches ?? 0) > 0);
+  assert.ok((printableTicket.winCriteria?.maxNumber ?? 0) >= game.minNumber);
 });
