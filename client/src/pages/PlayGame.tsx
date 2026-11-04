@@ -141,9 +141,9 @@ export default function PlayGame() {
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      <main className="flex-1 py-12 bg-muted/30">
+      <main className="flex-1 py-5 sm:py-7 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
+          <div className="mb-3">
             <Button 
               variant="ghost" 
               onClick={() => setLocation('/')}
@@ -154,14 +154,14 @@ export default function PlayGame() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 space-y-4">
               {countdown !== null && countdown >= 0 && (
-                <Card className="p-6 bg-primary/5 border-primary/20">
+                <Card className="p-4 bg-primary/5 border-primary/20">
                   <div className="text-center space-y-4">
-                    <div className="flex items-center justify-center gap-3">
+                    <div className="flex items-center justify-center gap-2">
                       <Clock className="w-8 h-8 text-primary animate-pulse" />
-                      <h2 className="font-display font-bold text-4xl text-primary">
+                      <h2 className="font-display font-bold text-2xl text-primary">
                         {countdown}s
                       </h2>
                     </div>
@@ -265,34 +265,34 @@ export default function PlayGame() {
                 </>
               )}
 
-              <Card className="p-6">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-2xl">🎮</span>
+              <Card className="p-4">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-lg">🎮</span>
                   </div>
                   <div>
-                    <h1 className="font-display font-bold text-3xl">{game.name}</h1>
-                    <p className="text-muted-foreground">{game.description}</p>
+                    <h1 className="font-display font-bold text-2xl">{game.name}</h1>
+                    <p className="text-sm text-muted-foreground">{game.description}</p>
                     <p className="text-sm text-primary font-medium mt-1">
                       Results are settled only from a published draw that matches the ticket mode.
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-muted/50 rounded-lg p-3">
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="bg-muted/50 rounded-md p-2">
                     <p className="text-xs text-muted-foreground">Number Range</p>
                     <p className="font-semibold">{game.minNumber}-{game.maxNumber}</p>
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="bg-muted/50 rounded-md p-2">
                     <p className="text-xs text-muted-foreground">Odds</p>
                     <p className="font-semibold">{game.minOdds}-{game.maxOdds}x</p>
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="bg-muted/50 rounded-md p-2">
                     <p className="text-xs text-muted-foreground">To Select</p>
                     <p className="font-semibold">{game.numbersToSelect} numbers</p>
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="bg-muted/50 rounded-md p-2">
                     <p className="text-xs text-muted-foreground">Min Matches</p>
                     <p className="font-semibold">{game.minMatches}+</p>
                   </div>
@@ -300,7 +300,7 @@ export default function PlayGame() {
               </Card>
 
               {!generatedResult && countdown === null && (
-                <Card className="p-6">
+                <Card className="p-4">
                   <NumberSelector
                     minNumber={game.minNumber}
                     maxNumber={game.maxNumber}
@@ -317,7 +317,7 @@ export default function PlayGame() {
               )}
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4">
               {!generatedResult && countdown === null && (
                 <>
                   <StakeInput
@@ -359,7 +359,7 @@ export default function PlayGame() {
               )}
 
               {(currentBetId || generatedResult) && (
-                <Card className="p-6">
+                <Card className="p-4">
                   <div className="text-center space-y-3">
                     <p className="text-sm text-muted-foreground">Your Bet</p>
                     <div className="flex flex-wrap justify-center gap-2 mb-4">

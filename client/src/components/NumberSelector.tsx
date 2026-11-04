@@ -92,10 +92,10 @@ export default function NumberSelector({
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-display font-semibold text-xl">
+          <h3 className="font-display font-semibold text-base sm:text-lg">
             {hasBonus ? `Select ${maxSelections} Numbers + Bonus` : `Select ${maxSelections} Numbers`}
           </h3>
           <p className="text-sm text-muted-foreground">
@@ -125,14 +125,14 @@ export default function NumberSelector({
       </div>
 
       {selectedNumbers.length > 0 && (
-        <Card className="p-4 bg-primary/5 dark:bg-primary/10">
+        <Card className="p-2.5 bg-primary/5 dark:bg-primary/10">
           <p className="text-sm font-medium mb-2">Your Selection:</p>
           <div className="flex flex-wrap gap-2">
             {selectedNumbers.map((num, index) => (
               <Badge 
                 key={`${num}-${index}`} 
                 variant="default" 
-                className="text-base px-3 py-1 cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors group relative"
+                className="text-xs px-2 py-0.5 cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors group relative"
                 onClick={() => handleRemoveNumber(index)}
                 data-testid={`selected-number-${num}-${index}`}
               >
@@ -143,7 +143,7 @@ export default function NumberSelector({
             {hasBonus && bonusNumber !== undefined && (
               <Badge 
                 variant="secondary" 
-                className="text-base px-3 py-1 border-2 border-chart-2"
+                className="text-xs px-2 py-0.5 border border-chart-2"
                 data-testid={`selected-bonus-${bonusNumber}`}
               >
                 Bonus: {bonusNumber}
@@ -155,8 +155,8 @@ export default function NumberSelector({
       )}
 
       <div>
-        <p className="text-sm font-medium mb-3">Main Numbers ({minNumber}-{maxNumber}):</p>
-        <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
+        <p className="text-xs font-medium mb-2">Main Numbers ({minNumber}-{maxNumber}):</p>
+        <div className="grid grid-cols-8 sm:grid-cols-10 lg:grid-cols-[repeat(13,minmax(0,1fr))] gap-1 sm:gap-1.5">
           {numbers.map(num => {
             const count = selectedNumbers.filter(n => n === num).length;
             const isDisabled = selectedNumbers.length >= maxSelections;
@@ -167,7 +167,7 @@ export default function NumberSelector({
                 onClick={() => handleNumberClick(num)}
                 disabled={isDisabled}
                 className={`
-                  aspect-square rounded-md font-semibold text-sm md:text-base
+                  aspect-square rounded font-semibold text-xs sm:text-sm
                   transition-all hover-elevate active-elevate-2 relative
                   ${count > 0
                     ? 'bg-primary text-primary-foreground border-2 border-primary' 
@@ -192,8 +192,8 @@ export default function NumberSelector({
 
       {hasBonus && (
         <div>
-          <p className="text-sm font-medium mb-3">Bonus Number (Optional):</p>
-          <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
+          <p className="text-xs font-medium mb-2">Bonus Number (Optional):</p>
+          <div className="grid grid-cols-8 sm:grid-cols-10 lg:grid-cols-[repeat(13,minmax(0,1fr))] gap-1 sm:gap-1.5">
             {numbers.map(num => {
               const isBonus = bonusNumber === num;
               const isInMainSelection = selectedNumbers.includes(num);
@@ -204,7 +204,7 @@ export default function NumberSelector({
                   onClick={() => handleBonusClick(num)}
                   disabled={isInMainSelection}
                   className={`
-                    aspect-square rounded-md font-semibold text-sm md:text-base
+                    aspect-square rounded font-semibold text-xs sm:text-sm
                     transition-all hover-elevate active-elevate-2
                     ${isBonus 
                       ? 'bg-chart-2 text-white border-2 border-chart-2' 

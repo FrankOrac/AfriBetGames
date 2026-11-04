@@ -27,13 +27,13 @@ export default function WinningsCalculator({
     : 0;
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-primary/10 to-chart-1/5">
-      <div className="flex items-start gap-3 mb-4">
-        <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+    <Card className="p-4 bg-gradient-to-br from-primary/10 to-chart-1/5">
+      <div className="flex items-start gap-2.5 mb-3">
+        <div className="w-8 h-8 rounded-md bg-primary/20 flex items-center justify-center flex-shrink-0">
           <TrendingUp className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-display font-semibold text-xl">Potential Winnings</h3>
+          <h3 className="font-display font-semibold text-lg">Potential Winnings</h3>
           <p className="text-sm text-muted-foreground">
             Based on your selections
           </p>
@@ -41,10 +41,10 @@ export default function WinningsCalculator({
       </div>
 
       {canWin ? (
-        <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <p className="text-sm text-muted-foreground mb-1">Minimum Win</p>
-            <p className="text-2xl font-bold text-primary" data-testid="text-min-winning">
+            <p className="text-lg font-bold text-primary" data-testid="text-min-winning">
               ₦{minWinning.toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -52,9 +52,9 @@ export default function WinningsCalculator({
             </p>
           </div>
 
-          <div className="border-t pt-4">
+          <div className="border-l pl-3">
             <p className="text-sm text-muted-foreground mb-1">Maximum Win</p>
-            <p className="text-3xl font-bold gradient-text" data-testid="text-max-winning">
+            <p className="text-xl font-bold gradient-text" data-testid="text-max-winning">
               ₦{maxWinning.toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -62,7 +62,7 @@ export default function WinningsCalculator({
             </p>
           </div>
 
-          <div className="bg-background/50 rounded-lg p-3 text-sm">
+          <div className="col-span-2 bg-background/50 rounded-md p-2 text-sm">
             <p className="font-medium mb-1">How it works:</p>
             <p className="text-muted-foreground text-xs">
               Your winnings = (Matched odds multiplied together) × Stake amount
@@ -70,7 +70,7 @@ export default function WinningsCalculator({
           </div>
         </div>
       ) : (
-        <div className="text-center py-8">
+        <div className="text-center py-3">
           <p className="text-muted-foreground">
             Select at least {requiredMatches} numbers to see potential winnings
           </p>

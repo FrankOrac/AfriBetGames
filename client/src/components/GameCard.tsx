@@ -28,24 +28,24 @@ export default function GameCard({
   href,
 }: GameCardProps) {
   return (
-    <div className="group relative">
-        <Card className="p-6 rounded-xl overflow-visible relative bg-gradient-to-br from-background via-background to-muted/30 border-2 hover:border-primary/50 transition-colors duration-300">
+    <div className="group relative h-full">
+        <Card className="h-full p-2.5 sm:p-3 rounded-lg overflow-visible relative bg-gradient-to-br from-background via-background to-muted/30 border hover:border-primary/50 transition-colors duration-300">
           {/* Glow effect on hover */}
           <div className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-r from-primary/20 via-purple-500/20 to-primary/20 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100" />
           
-          <div className="relative z-10 flex flex-col gap-6">
+          <div className="relative z-10 flex h-full flex-col gap-2.5">
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-2">
                 <motion.div 
-                  className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center backdrop-blur-sm"
+                  className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-md bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center backdrop-blur-sm"
                   whileHover={{ rotate: 6, scale: 1.05 }}
                   transition={{ duration: 0.6 }}
                 >
-                  <Icon className="w-6 h-6 text-primary" />
+                  <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 </motion.div>
                 <div>
                   <motion.h3 
-                    className="font-display font-semibold text-xl"
+                    className="font-display font-semibold text-sm sm:text-base leading-tight"
                     style={{ transform: "translateZ(20px)" }}
                   >
                     {title}
@@ -55,7 +55,7 @@ export default function GameCard({
                       style={{ transform: "translateZ(15px)" }}
                       whileHover={{ scale: 1.1 }}
                     >
-                      <Badge variant="secondary" className="mt-1 bg-gradient-to-r from-primary/80 to-purple-500/80 text-white border-0">
+                      <Badge variant="secondary" className="mt-0.5 h-4 px-1.5 text-[9px] bg-gradient-to-r from-primary/80 to-purple-500/80 text-white border-0">
                         {badge}
                       </Badge>
                     </motion.div>
@@ -65,14 +65,14 @@ export default function GameCard({
             </div>
 
             <motion.p 
-              className="text-muted-foreground"
+              className="hidden sm:block text-xs leading-snug text-muted-foreground line-clamp-2 min-h-8"
               style={{ transform: "translateZ(10px)" }}
             >
               {description}
             </motion.p>
 
             <motion.div 
-              className="grid grid-cols-2 gap-4"
+              className="grid grid-cols-2 gap-1.5"
               style={{ transform: "translateZ(15px)" }}
             >
               {[
@@ -83,7 +83,7 @@ export default function GameCard({
               ].map((item, index) => (
                 <motion.div
                   key={item.label}
-                  className="space-y-1 p-3 rounded-lg bg-muted/50 backdrop-blur-sm"
+                  className="min-w-0 p-1.5 rounded-md bg-muted/50 backdrop-blur-sm"
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
@@ -92,21 +92,22 @@ export default function GameCard({
                     scale: 1.05,
                   }}
                 >
-                  <p className="text-xs text-muted-foreground">{item.label}</p>
-                  <p className="font-semibold text-lg bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+                  <p className="truncate text-[9px] sm:text-[10px] leading-tight text-muted-foreground">{item.label}</p>
+                  <p className="truncate text-xs sm:text-sm font-semibold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
                     {item.value}
                   </p>
                 </motion.div>
               ))}
             </motion.div>
 
-            <div className="relative z-20">
+            <div className="relative z-20 mt-auto">
               <Button
                 asChild
-                className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/30" 
+                size="sm"
+                className="w-full min-h-8 px-2 text-[11px] sm:text-xs bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-sm shadow-primary/20"
                 data-testid={`button-play-${title.toLowerCase().replace(/\s+/g, '-')}`}
               >
-                <a href={href}>Play {title}</a>
+                <a href={href}>Play now</a>
               </Button>
             </div>
           </div>

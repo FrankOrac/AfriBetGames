@@ -89,7 +89,7 @@ export default function GamesOverview() {
   ];
 
   return (
-    <section id="games" className="py-20 bg-muted/30 relative overflow-hidden">
+    <section id="games" className="py-8 sm:py-12 bg-muted/30 relative overflow-hidden">
       {/* Floating animated background shapes */}
       <motion.div
         className="absolute top-0 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-3xl"
@@ -119,7 +119,7 @@ export default function GamesOverview() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div 
-          className="text-center mb-12"
+          className="text-center mb-5 sm:mb-7"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
@@ -132,7 +132,7 @@ export default function GamesOverview() {
             transition={{ duration: 0.6, delay: 0.1 }}
           >
             <motion.h2 
-              className="font-display font-bold text-4xl md:text-5xl mb-4 inline-block"
+              className="font-display font-bold text-2xl sm:text-3xl mb-2 inline-block"
               animate={{
                 backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
               }}
@@ -153,7 +153,7 @@ export default function GamesOverview() {
             </motion.h2>
           </motion.div>
           <motion.p 
-            className="text-xl text-muted-foreground max-w-2xl mx-auto"
+            className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
@@ -164,7 +164,7 @@ export default function GamesOverview() {
 
           {/* Decorative sparkles */}
           <motion.div
-            className="flex justify-center gap-4 mt-4"
+            className="hidden sm:flex justify-center gap-3 mt-3"
             initial={{ opacity: 0, scale: 0 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
@@ -184,15 +184,15 @@ export default function GamesOverview() {
                   delay: i * 0.3,
                 }}
               >
-                <Sparkles className="w-5 h-5 text-primary" />
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
               </motion.div>
             ))}
           </motion.div>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-3">
           {games.map((game) => (
-            <div key={game.title}>
+            <div key={game.title} className="min-w-0">
               <GameCard
                 {...game}
                 href={game.route}
@@ -201,28 +201,6 @@ export default function GamesOverview() {
           ))}
         </div>
 
-        {/* Floating call-to-action */}
-        <motion.div
-          className="mt-16 text-center"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-        >
-          <motion.p
-            className="text-muted-foreground text-lg"
-            animate={{
-              y: [0, -5, 0],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            Can't decide? Try our most popular games! ✨
-          </motion.p>
-        </motion.div>
       </div>
     </section>
   );

@@ -155,8 +155,8 @@ export default function VirtualBetting() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
       <Header />
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        <div className="mb-3">
           <Link href="/#games">
             <Button variant="ghost" className="gap-2" data-testid="button-back">
               <ArrowLeft className="h-4 w-4" />
@@ -165,23 +165,23 @@ export default function VirtualBetting() {
           </Link>
         </div>
 
-        <div className="max-w-4xl mx-auto">
-          <Card className="mb-6 bg-gradient-to-r from-green-600 to-emerald-700 text-white border-0">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+        <div className="max-w-6xl mx-auto">
+          <Card className="mb-4 bg-gradient-to-r from-green-600 to-emerald-700 text-white border-0">
+            <CardHeader className="p-4 pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <TrendingUp className="h-10 w-10" />
-                    <CardTitle className="text-3xl font-bold">{game.name}</CardTitle>
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp className="h-7 w-7" />
+                    <CardTitle className="text-2xl font-bold">{game.name}</CardTitle>
                   </div>
-                  <CardDescription className="text-green-100 text-lg">
+                  <CardDescription className="text-green-100 text-sm">
                     {game.description}
                   </CardDescription>
                 </div>
                 <div className="text-center">
-                  <div className="bg-white/20 backdrop-blur rounded-full w-24 h-24 flex flex-col items-center justify-center mb-2">
-                    <Calendar className="h-8 w-8 mb-1" />
-                    <span className="text-3xl font-bold">{currentWeek}</span>
+                  <div className="bg-white/20 backdrop-blur rounded-full w-14 h-14 flex flex-col items-center justify-center mb-1">
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-lg font-bold">{currentWeek}</span>
                   </div>
                   <Badge className="bg-white text-green-600 font-semibold">
                     Week {currentWeek}/35
@@ -189,18 +189,18 @@ export default function VirtualBetting() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="bg-white/20 backdrop-blur rounded-lg p-4">
+            <CardContent className="p-4 pt-0">
+              <div className="space-y-3">
+                <div className="bg-white/20 backdrop-blur rounded-md p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <p className="text-green-100 text-sm mb-1">Next Draw In</p>
-                      <p className="text-2xl font-mono font-bold">{timeUntilNextWeek}</p>
+                      <p className="text-base sm:text-xl font-mono font-bold">{timeUntilNextWeek}</p>
                       <p className="text-green-100 text-xs mt-1">Sunday at 6:00 PM</p>
                     </div>
                     <div className="text-right">
                       <p className="text-green-100 text-sm mb-1">Odds Range</p>
-                      <p className="text-2xl font-bold">{game.minOdds}x - {game.maxOdds}x</p>
+                      <p className="text-lg font-bold">{game.minOdds}x - {game.maxOdds}x</p>
                     </div>
                   </div>
                 </div>
@@ -220,15 +220,15 @@ export default function VirtualBetting() {
           </Card>
 
           {!currentBetId && !generatedResult ? (
-            <div className="grid gap-6">
+            <div className="grid gap-4">
               <Card className="bg-white dark:bg-gray-800">
-                <CardHeader>
+                <CardHeader className="p-4 pb-3">
                   <CardTitle className="text-gray-900 dark:text-white">Select Your Numbers</CardTitle>
                   <CardDescription className="text-gray-600 dark:text-gray-400">
                     Pick {game.numbersToSelect} numbers from {game.minNumber} to {game.maxNumber} for Week {currentWeek}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 pt-0">
                   <NumberSelector
                     minNumber={game.minNumber}
                     maxNumber={game.maxNumber}
@@ -240,7 +240,7 @@ export default function VirtualBetting() {
                 </CardContent>
               </Card>
 
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 gap-4">
                 <StakeInput
                   initialStake={stakeAmount}
                   onStakeChange={setStakeAmount}
@@ -257,7 +257,7 @@ export default function VirtualBetting() {
               <Button
                 onClick={handlePlaceBet}
                 disabled={placeBetMutation.isPending || selectedNumbers.length !== game.numbersToSelect}
-                className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white py-6 text-lg font-semibold"
+                className="w-full min-h-10 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white text-sm font-semibold"
                 data-testid="button-place-bet"
               >
                 <Zap className="mr-2 h-5 w-5" />

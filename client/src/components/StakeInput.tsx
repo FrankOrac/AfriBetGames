@@ -36,10 +36,10 @@ export default function StakeInput({
   };
 
   return (
-    <Card className="p-6">
-      <h3 className="font-display font-semibold text-xl mb-4">Stake Amount</h3>
+    <Card className="p-4">
+      <h3 className="font-display font-semibold text-lg mb-3">Stake Amount</h3>
       
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -59,7 +59,7 @@ export default function StakeInput({
               type="number"
               value={stake}
               onChange={(e) => handleStakeChange(Number(e.target.value))}
-              className="text-center text-xl font-bold pl-8"
+              className="text-center text-base font-bold pl-8"
               min={minStake}
               max={maxStake}
               data-testid="input-stake"

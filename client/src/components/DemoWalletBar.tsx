@@ -46,24 +46,24 @@ export default function DemoWalletBar() {
   if (!demoEnabled) return null;
 
   return (
-    <div className="bg-sky-950 text-sky-50 border-b border-sky-700 px-4 py-3" role="status">
-      <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <FlaskConical className="w-5 h-5 text-sky-300" aria-hidden="true" />
+    <div className="bg-sky-950 text-sky-50 border-b border-sky-700 px-3 py-2" role="status">
+      <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <FlaskConical className="w-4 h-4 text-sky-300" aria-hidden="true" />
           <div>
-            <p className="font-semibold">Demo sandbox — no real money</p>
-            <p className="text-xs text-sky-200">Test credits and winnings cannot be deposited, transferred, or withdrawn.</p>
+            <p className="text-sm font-semibold">Demo sandbox — no real money</p>
+            <p className="hidden sm:block text-[11px] text-sky-200">Credits and winnings cannot be deposited, transferred, or withdrawn.</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-2 rounded-md bg-sky-900 px-3 py-2 font-semibold">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-sky-900 px-2 py-1.5 text-xs font-semibold">
             <WalletCards className="w-4 h-4" /> Demo ₦{(wallet.data?.wallet.balance ?? 0).toLocaleString()}
           </span>
           <Button size="sm" variant="secondary" onClick={() => topUp.mutate(10_000)} disabled={topUp.isPending}>
-            <Plus /> Add ₦10,000 demo
+            <Plus /> ₦10k
           </Button>
           <Button size="sm" variant="outline" className="border-sky-500 text-sky-50" onClick={() => topUp.mutate(50_000)} disabled={topUp.isPending}>
-            <Plus /> Add ₦50,000 demo
+            <Plus /> ₦50k
           </Button>
         </div>
       </div>

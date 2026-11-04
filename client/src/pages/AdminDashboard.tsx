@@ -168,8 +168,8 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        <section className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 space-y-4">
+        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           <Metric label="Readiness" value={`${readiness}%`} icon={<ShieldCheck />} />
           <Metric label="Bets" value={control.metrics.totalBets.toLocaleString()} icon={<TicketCheck />} />
           <Metric label="Pending" value={control.metrics.pendingBets.toLocaleString()} icon={<RefreshCw />} />
@@ -180,7 +180,7 @@ export default function AdminDashboard() {
 
         <InfrastructureCard control={control} />
 
-        <Tabs defaultValue="features" className="space-y-5">
+        <Tabs defaultValue="features" className="space-y-3">
           <TabsList className="bg-slate-900 border border-slate-800 h-auto flex-wrap justify-start">
             <TabsTrigger value="features">Feature controls</TabsTrigger>
             <TabsTrigger value="compliance">Compliance</TabsTrigger>
@@ -190,7 +190,7 @@ export default function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="features">
-            <Card className="p-6 bg-slate-900 border-slate-800 text-slate-100 space-y-5">
+            <Card className="p-4 bg-slate-900 border-slate-800 text-slate-100 space-y-2">
               <SectionTitle icon={<Settings2 />} title="Runtime feature controls" description="Stored in the production database and enforced by every write endpoint." />
               <FeatureSwitch label="Maintenance mode" description="Immediately disables betting, posting and contact submissions." checked={control.settings.maintenanceMode} active={control.capabilities.maintenanceMode} onChange={(value) => updateFeatures({ maintenanceMode: value })} />
               <FeatureSwitch label="Demo sandbox" description="Enables test-only wallets, demo bets and demo draws without completing real-money compliance gates." checked={control.settings.demoModeEnabled} active={control.capabilities.demoModeEnabled} onChange={(value) => updateFeatures({ demoModeEnabled: value })} />
@@ -202,7 +202,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="compliance">
-            <div className="space-y-4">
+            <div className="grid xl:grid-cols-2 gap-3">
               {control.complianceGates.map((gate) => <ComplianceGateEditor key={gate.key} gate={gate} adminFetch={adminFetch} onSaved={loadControlPlane} />)}
             </div>
           </TabsContent>
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
 }
 
 function Metric({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
-  return <Card className="p-4 bg-slate-900 border-slate-800 text-slate-100"><div className="text-emerald-400 mb-3">{icon}</div><p className="text-xs text-slate-400">{label}</p><p className="text-xl font-bold mt-1">{value}</p></Card>;
+  return <Card className="p-3 bg-slate-900 border-slate-800 text-slate-100"><div className="text-emerald-400 mb-1 [&>svg]:size-4">{icon}</div><p className="text-[11px] text-slate-400">{label}</p><p className="text-lg font-bold">{value}</p></Card>;
 }
 
 function SectionTitle({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
@@ -230,11 +230,11 @@ function InfrastructureCard({ control }: { control: ControlPlane }) {
     ["Operator authentication", control.infrastructure.operatorAuthentication],
     ["Public preview disabled", !control.infrastructure.publicPreviewMode],
   ] as const;
-  return <Card className="p-5 bg-slate-900 border-slate-800 text-slate-100"><div className="flex flex-wrap items-center justify-between gap-4"><SectionTitle icon={<ShieldCheck />} title="Infrastructure gates" description="These cannot be bypassed by a dashboard switch." /><div className="flex flex-wrap gap-2">{items.map(([label, ok]) => <Badge key={label} variant="outline" className={ok ? "border-emerald-600 text-emerald-300" : "border-amber-600 text-amber-300"}>{ok ? <CheckCircle2 /> : <AlertTriangle />} {label}</Badge>)}</div></div></Card>;
+  return <Card className="p-4 bg-slate-900 border-slate-800 text-slate-100"><div className="flex flex-wrap items-center justify-between gap-3"><SectionTitle icon={<ShieldCheck />} title="Infrastructure gates" description="These cannot be bypassed by a dashboard switch." /><div className="flex flex-wrap gap-1.5">{items.map(([label, ok]) => <Badge key={label} variant="outline" className={ok ? "border-emerald-600 text-emerald-300" : "border-amber-600 text-amber-300"}>{ok ? <CheckCircle2 /> : <AlertTriangle />} {label}</Badge>)}</div></div></Card>;
 }
 
 function FeatureSwitch({ label, description, checked, active, disabled, onChange }: { label: string; description: string; checked: boolean; active: boolean; disabled?: boolean; onChange: (value: boolean) => void }) {
-  return <div className="flex items-center justify-between gap-6 border-t border-slate-800 pt-5"><div><div className="flex items-center gap-2"><h3 className="font-semibold">{label}</h3><Badge variant="outline" className={active ? "border-emerald-600 text-emerald-300" : "border-slate-700 text-slate-400"}>{active ? "Active" : "Inactive"}</Badge></div><p className="text-sm text-slate-400 mt-1">{description}</p></div><Switch checked={checked} disabled={disabled} onCheckedChange={onChange} aria-label={`Toggle ${label}`} /></div>;
+  return <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-3"><div><div className="flex items-center gap-2"><h3 className="text-sm font-semibold">{label}</h3><Badge variant="outline" className={active ? "border-emerald-600 text-emerald-300" : "border-slate-700 text-slate-400"}>{active ? "Active" : "Inactive"}</Badge></div><p className="text-xs text-slate-400 mt-0.5">{description}</p></div><Switch checked={checked} disabled={disabled} onCheckedChange={onChange} aria-label={`Toggle ${label}`} /></div>;
 }
 
 function ComplianceGateEditor({ gate, adminFetch, onSaved }: { gate: ComplianceGate; adminFetch: (url: string, options?: RequestInit) => Promise<unknown>; onSaved: () => Promise<void> }) {
@@ -253,7 +253,7 @@ function ComplianceGateEditor({ gate, adminFetch, onSaved }: { gate: ComplianceG
       toast({ title: "Unable to save gate", description: caught instanceof Error ? caught.message : "Request failed", variant: "destructive" });
     } finally { setSaving(false); }
   };
-  return <Card className="p-5 bg-slate-900 border-slate-800 text-slate-100"><div className="grid lg:grid-cols-[1fr_180px] gap-5"><div><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{gate.category}</Badge><h3 className="font-semibold text-lg">{gate.label}</h3></div><p className="text-sm text-slate-400 mt-2">{gate.description}</p><div className="grid md:grid-cols-2 gap-3 mt-4"><div><Label>Evidence / approval reference</Label><Textarea value={evidence} onChange={(event) => setEvidence(event.target.value)} className="mt-2 bg-slate-950 border-slate-700" placeholder="Document URL, approval ID, test report or signed decision" /></div><div><Label>Reviewed by</Label><Input value={reviewedBy} onChange={(event) => setReviewedBy(event.target.value)} className="mt-2 bg-slate-950 border-slate-700" placeholder="Accountable owner" /></div></div></div><div className="space-y-3"><Label>Status</Label><Select value={status} onValueChange={setStatus}><SelectTrigger className="bg-slate-950 border-slate-700"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pending">Pending</SelectItem><SelectItem value="blocked">Blocked</SelectItem><SelectItem value="complete">Complete</SelectItem></SelectContent></Select><Button className="w-full" onClick={save} disabled={saving}><Save /> Save gate</Button></div></div></Card>;
+  return <Card className="p-4 bg-slate-900 border-slate-800 text-slate-100"><div className="grid lg:grid-cols-[1fr_150px] gap-3"><div><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{gate.category}</Badge><h3 className="font-semibold text-base">{gate.label}</h3></div><p className="text-xs text-slate-400 mt-1">{gate.description}</p><div className="grid md:grid-cols-2 gap-2 mt-3"><div><Label>Evidence / approval reference</Label><Textarea value={evidence} onChange={(event) => setEvidence(event.target.value)} className="mt-1 min-h-16 bg-slate-950 border-slate-700" placeholder="Document URL, approval ID, test report or signed decision" /></div><div><Label>Reviewed by</Label><Input value={reviewedBy} onChange={(event) => setReviewedBy(event.target.value)} className="mt-1 bg-slate-950 border-slate-700" placeholder="Accountable owner" /></div></div></div><div className="space-y-2"><Label>Status</Label><Select value={status} onValueChange={setStatus}><SelectTrigger className="bg-slate-950 border-slate-700"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pending">Pending</SelectItem><SelectItem value="blocked">Blocked</SelectItem><SelectItem value="complete">Complete</SelectItem></SelectContent></Select><Button className="w-full" onClick={save} disabled={saving}><Save /> Save gate</Button></div></div></Card>;
 }
 
 function RiskEditor({ settings, adminFetch, onSaved }: { settings: PlatformSettings; adminFetch: (url: string, options?: RequestInit) => Promise<unknown>; onSaved: () => Promise<void> }) {

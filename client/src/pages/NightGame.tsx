@@ -144,8 +144,8 @@ export default function NightGame() {
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 dark:from-black dark:to-gray-900">
       <Header />
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        <div className="mb-3">
           <Link href="/#games">
             <Button variant="ghost" className="gap-2 text-gray-200 dark:text-gray-300 hover:text-white" data-testid="button-back">
               <ArrowLeft className="h-4 w-4" />
@@ -154,35 +154,35 @@ export default function NightGame() {
           </Link>
         </div>
 
-        <div className="max-w-4xl mx-auto">
-          <Card className="mb-6 bg-gradient-to-r from-indigo-600 to-purple-700 text-white border-0">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+        <div className="max-w-6xl mx-auto">
+          <Card className="mb-4 bg-gradient-to-r from-indigo-600 to-purple-700 text-white border-0">
+            <CardHeader className="p-4 pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Moon className="h-10 w-10" />
-                    <CardTitle className="text-3xl font-bold">{game.name}</CardTitle>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Moon className="h-7 w-7" />
+                    <CardTitle className="text-2xl font-bold">{game.name}</CardTitle>
                   </div>
-                  <CardDescription className="text-indigo-100 text-lg">
+                  <CardDescription className="text-indigo-100 text-sm">
                     {game.description}
                   </CardDescription>
                 </div>
-                <Badge className="bg-white text-indigo-600 text-lg px-4 py-2">
-                  <Clock className="h-5 w-5 mr-2" />
+                <Badge className="bg-white text-indigo-600 text-xs px-2 py-1.5">
+                  <Clock className="h-4 w-4 mr-1" />
                   12:00 AM Daily
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="bg-white/20 backdrop-blur rounded-lg p-4">
+            <CardContent className="p-4 pt-0">
+              <div className="bg-white/20 backdrop-blur rounded-md p-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-indigo-100 text-sm mb-1">Next Draw In</p>
-                    <p className="text-3xl font-mono font-bold">{timeUntilDraw}</p>
+                    <p className="text-xl sm:text-2xl font-mono font-bold">{timeUntilDraw}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-indigo-100 text-sm mb-1">Odds Range</p>
-                    <p className="text-2xl font-bold">{game.minOdds}x - {game.maxOdds}x</p>
+                    <p className="text-lg font-bold">{game.minOdds}x - {game.maxOdds}x</p>
                   </div>
                 </div>
               </div>
@@ -190,16 +190,16 @@ export default function NightGame() {
           </Card>
 
           {!currentBetId && !generatedResult ? (
-            <div className="grid gap-6">
+            <div className="grid gap-4">
               <Card className="bg-white dark:bg-gray-800">
-                <CardHeader>
+                <CardHeader className="p-4 pb-3">
                   <CardTitle className="text-gray-900 dark:text-white">Select Your Numbers</CardTitle>
                   <CardDescription className="text-gray-600 dark:text-gray-400">
                     Pick {game.numbersToSelect} numbers from {game.minNumber} to {game.maxNumber}
                     {game.hasBonus && ' plus a bonus number'}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 pt-0">
                   <NumberSelector
                     minNumber={game.minNumber}
                     maxNumber={game.maxNumber}
@@ -215,7 +215,7 @@ export default function NightGame() {
                 </CardContent>
               </Card>
 
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 gap-4">
                 <StakeInput
                   initialStake={stakeAmount}
                   onStakeChange={setStakeAmount}
@@ -232,7 +232,7 @@ export default function NightGame() {
               <Button
                 onClick={handlePlaceBet}
                 disabled={placeBetMutation.isPending || selectedNumbers.length !== game.numbersToSelect}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white py-6 text-lg font-semibold"
+                className="w-full min-h-10 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white text-sm font-semibold"
                 data-testid="button-place-bet"
               >
                 <Zap className="mr-2 h-5 w-5" />
