@@ -41,13 +41,7 @@ export default function ContactModal({ open, onOpenChange, type = 'general' }: C
 
   const contactMutation = useMutation({
     mutationFn: async (data: InsertContactInquiry) => {
-      return await apiRequest('/api/contact', {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      return await apiRequest('POST', '/api/contact', data);
     },
     onSuccess: () => {
       toast({
@@ -188,7 +182,7 @@ export default function ContactModal({ open, onOpenChange, type = 'general' }: C
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Mail className="w-4 h-4" />
-              <span>info@afribet.com</span>
+              <span>info@afribetgames.com</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Phone className="w-4 h-4" />
@@ -196,7 +190,7 @@ export default function ContactModal({ open, onOpenChange, type = 'general' }: C
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="w-4 h-4" />
-              <span>Lagos, Nigeria</span>
+              <span>Benin City, Edo State, Nigeria</span>
             </div>
           </div>
         </div>

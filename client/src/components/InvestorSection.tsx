@@ -9,8 +9,8 @@ import {
   Globe,
   Briefcase,
 } from "lucide-react";
-import frankImage from "@assets/generated_images/Frank_Osakwe_professional_headshot_290f3fd3.png";
-import ifeadiImage from "@assets/generated_images/Ifeadi_Andrew_professional_headshot_6ec5d41b.png";
+import frankImage from "@assets/generated_images/frank-osakwe.webp";
+import ifeadiImage from "@assets/generated_images/ifeadi-andrew.webp";
 import ContactModal from "./ContactModal";
 
 export default function InvestorSection() {

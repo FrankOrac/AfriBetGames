@@ -169,7 +169,7 @@ export default function MainGame() {
               </div>
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Win Big</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Match {mainGames[0]?.minMatches}+ numbers to win instant payouts
+                Match {mainGames[0]?.minMatches}+ numbers for a winning ticket under the published rules
               </p>
             </div>
           </div>

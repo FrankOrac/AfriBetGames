@@ -1,41 +1,19 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, real, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, numeric, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-});
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
-
-export enum GameType {
-  VIRTUAL = 'virtual',
-  MINOR = 'minor',
-  MAJOR = 'major',
-  MEGA = 'mega',
-  NOON = 'noon',
-  NIGHT = 'night',
-  AVIATOR = 'aviator',
-}
+import { GameType } from "./game-types";
+export { GameType } from "./game-types";
 
 export const games = pgTable("games", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  type: text("type").notNull(),
+  type: text("type").notNull().unique(),
   name: text("name").notNull(),
   description: text("description"),
   minNumber: integer("min_number").notNull(),
   maxNumber: integer("max_number").notNull(),
-  minOdds: real("min_odds").notNull(),
-  maxOdds: real("max_odds").notNull(),
+  minOdds: numeric("min_odds", { precision: 10, scale: 4, mode: "number" }).notNull(),
+  maxOdds: numeric("max_odds", { precision: 10, scale: 4, mode: "number" }).notNull(),
   numbersToSelect: integer("numbers_to_select").notNull(),
   minMatches: integer("min_matches").notNull(),
   hasBonus: boolean("has_bonus").notNull().default(false),
@@ -47,56 +25,65 @@ export type Game = typeof games.$inferSelect;
 
 export const bets = pgTable("bets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  gameId: varchar("game_id").notNull(),
+  gameId: varchar("game_id").notNull().references(() => games.id, { onDelete: "restrict" }),
   selectedNumbers: text("selected_numbers").notNull(),
   bonusNumber: integer("bonus_number"),
-  stakeAmount: real("stake_amount").notNull(),
-  potentialWinning: real("potential_winning"),
+  stakeAmount: numeric("stake_amount", { precision: 14, scale: 2, mode: "number" }).notNull(),
+  potentialWinning: numeric("potential_winning", { precision: 14, scale: 2, mode: "number" }),
   status: text("status").notNull().default('pending'),
-  payout: real("payout"),
+  payout: numeric("payout", { precision: 14, scale: 2, mode: "number" }),
   resultId: varchar("result_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  index("bets_game_id_idx").on(table.gameId),
+  index("bets_created_at_idx").on(table.createdAt),
+]);
 
-export const insertBetSchema = createInsertSchema(bets).omit({ 
-  id: true, 
-  createdAt: true 
-}).extend({
-  selectedNumbers: z.array(z.number()).min(1),
-  bonusNumber: z.number().optional(),
-  stakeAmount: z.number().min(1),
-});
+export const insertBetSchema = z.object({
+  gameId: z.string().uuid(),
+  selectedNumbers: z.array(z.number().int()).min(1).max(10),
+  bonusNumber: z.number().int().optional(),
+  stakeAmount: z.number().finite().min(1).max(1_000_000),
+}).strict();
 
 export type InsertBet = z.infer<typeof insertBetSchema>;
+export type NewBet = InsertBet & { potentialWinning?: number };
 export type Bet = typeof bets.$inferSelect;
 
 export const results = pgTable("results", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  gameId: varchar("game_id").notNull(),
+  gameId: varchar("game_id").notNull().references(() => games.id, { onDelete: "restrict" }),
   drawDate: timestamp("draw_date").notNull(),
   winningNumbers: text("winning_numbers").notNull(),
   bonusNumber: integer("bonus_number"),
   odds: text("odds").notNull(),
-});
+}, (table) => [
+  index("results_game_draw_idx").on(table.gameId, table.drawDate),
+]);
 
-export const insertResultSchema = createInsertSchema(results).omit({ id: true }).extend({
-  winningNumbers: z.array(z.number()).min(1),
-  bonusNumber: z.number().optional(),
-  odds: z.array(z.number()).min(1),
-});
+export const insertResultSchema = z.object({
+  gameId: z.string().uuid(),
+  drawDate: z.coerce.date(),
+  winningNumbers: z.array(z.number().int()).min(1).max(10),
+  bonusNumber: z.number().int().optional(),
+  odds: z.array(z.number().finite().positive()).min(1).max(10),
+}).strict();
 
 export type InsertResult = z.infer<typeof insertResultSchema>;
 export type Result = typeof results.$inferSelect;
 
 export const winnings = pgTable("winnings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  betId: varchar("bet_id").notNull(),
-  resultId: varchar("result_id").notNull(),
+  betId: varchar("bet_id").notNull().references(() => bets.id, { onDelete: "cascade" }),
+  resultId: varchar("result_id").notNull().references(() => results.id, { onDelete: "restrict" }),
   matchedNumbers: text("matched_numbers").notNull(),
   matchedCount: integer("matched_count").notNull(),
-  winningAmount: real("winning_amount").notNull(),
+  winningAmount: numeric("winning_amount", { precision: 14, scale: 2, mode: "number" }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("winnings_bet_id_idx").on(table.betId),
+  index("winnings_created_at_idx").on(table.createdAt),
+]);
 
 export const insertWinningSchema = createInsertSchema(winnings).omit({ 
   id: true, 
@@ -111,34 +98,38 @@ export type Winning = typeof winnings.$inferSelect;
 export const gameCodes = pgTable("game_codes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   code: text("code").notNull().unique(),
-  gameId: varchar("game_id").notNull(),
+  gameId: varchar("game_id").references(() => games.id, { onDelete: "cascade" }),
   expiresAt: timestamp("expires_at"),
   usesRemaining: integer("uses_remaining"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertGameCodeSchema = createInsertSchema(gameCodes).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertGameCodeSchema = z.object({
+  code: z.string().trim().min(6).max(40).regex(/^[A-Z0-9_-]+$/i),
+  gameId: z.string().uuid().nullable().optional(),
+  expiresAt: z.coerce.date().nullable().optional(),
+  usesRemaining: z.number().int().positive().nullable().optional(),
+}).strict();
 
 export type InsertGameCode = z.infer<typeof insertGameCodeSchema>;
 export type GameCode = typeof gameCodes.$inferSelect;
 
 export const aviatorSessions = pgTable("aviator_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  betId: varchar("bet_id").notNull(),
-  startMultiplier: real("start_multiplier").notNull().default(1.0),
-  currentMultiplier: real("current_multiplier").notNull(),
-  crashMultiplier: real("crash_multiplier").notNull(),
+  betId: varchar("bet_id").notNull().references(() => bets.id, { onDelete: "cascade" }),
+  startMultiplier: numeric("start_multiplier", { precision: 10, scale: 4, mode: "number" }).notNull().default(1),
+  currentMultiplier: numeric("current_multiplier", { precision: 10, scale: 4, mode: "number" }).notNull(),
+  crashMultiplier: numeric("crash_multiplier", { precision: 10, scale: 4, mode: "number" }).notNull(),
   status: text("status").notNull().default('active'),
-  autoCashOutAt: real("auto_cash_out_at"),
-  cashedOutAt: real("cashed_out_at"),
-  cashedOutAmount: real("cashed_out_amount"),
+  autoCashOutAt: numeric("auto_cash_out_at", { precision: 10, scale: 4, mode: "number" }),
+  cashedOutAt: numeric("cashed_out_at", { precision: 10, scale: 4, mode: "number" }),
+  cashedOutAmount: numeric("cashed_out_amount", { precision: 14, scale: 2, mode: "number" }),
   multiplierHistory: text("multiplier_history").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
-});
+}, (table) => [
+  uniqueIndex("aviator_sessions_bet_id_idx").on(table.betId),
+]);
 
 export const insertAviatorSessionSchema = createInsertSchema(aviatorSessions).omit({
   id: true,
@@ -164,26 +155,32 @@ export const forumPosts = pgTable("forum_posts", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertForumPostSchema = createInsertSchema(forumPosts).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertForumPostSchema = z.object({
+  authorName: z.string().trim().min(2).max(50),
+  title: z.string().trim().min(4).max(120),
+  contentType: z.enum(["win_story", "lucky_numbers", "game_code", "suggestion"]),
+  gameType: z.enum(GameType),
+  content: z.string().trim().min(10).max(2_000),
+}).strict();
 
 export type InsertForumPost = z.infer<typeof insertForumPostSchema>;
 export type ForumPost = typeof forumPosts.$inferSelect;
 
 export const forumComments = pgTable("forum_comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  postId: varchar("post_id").notNull(),
+  postId: varchar("post_id").notNull().references(() => forumPosts.id, { onDelete: "cascade" }),
   authorName: text("author_name").notNull(),
   comment: text("comment").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  index("forum_comments_post_id_idx").on(table.postId),
+]);
 
-export const insertForumCommentSchema = createInsertSchema(forumComments).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertForumCommentSchema = z.object({
+  postId: z.string().uuid(),
+  authorName: z.string().trim().min(2).max(50),
+  comment: z.string().trim().min(2).max(1_000),
+}).strict();
 
 export type InsertForumComment = z.infer<typeof insertForumCommentSchema>;
 export type ForumComment = typeof forumComments.$inferSelect;
@@ -218,11 +215,14 @@ export const contactInquiries = pgTable("contact_inquiries", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertContactInquirySchema = createInsertSchema(contactInquiries).omit({
-  id: true,
-  createdAt: true,
-  status: true,
-});
+export const insertContactInquirySchema = z.object({
+  name: z.string().trim().min(2).max(100),
+  email: z.string().trim().email().max(254),
+  phone: z.string().trim().min(7).max(30).optional(),
+  subject: z.string().trim().min(3).max(150),
+  message: z.string().trim().min(10).max(5_000),
+  type: z.enum(["general", "investor"]).default("general"),
+}).strict();
 
 export type InsertContactInquiry = z.infer<typeof insertContactInquirySchema>;
 export type ContactInquiry = typeof contactInquiries.$inferSelect;

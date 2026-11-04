@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Trophy, Zap, Clock } from 'lucide-react';
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import { useRef } from 'react';
-import heroImage from '@assets/generated_images/Hero_celebration_winning_image_f913959a.png';
+import heroImage from '@assets/generated_images/hero-celebration.webp';
 
 export default function Hero() {
   const ref = useRef<HTMLDivElement>(null);
@@ -114,7 +114,7 @@ export default function Hero() {
               }}
               style={{ backgroundSize: "200% 200%" }}
             >
-              Get Paid Instantly.
+              Track Every Ticket.
             </motion.span>
           </motion.h1>
           
@@ -124,8 +124,7 @@ export default function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
-            Africa's premier gaming platform offering instant results, favorable odds, and daily payouts. 
-            Simply pick your numbers and start winning today.
+            Explore number games, keep a private ticket reference, and check every published draw in one place.
           </motion.p>
 
           <motion.div 
@@ -171,7 +170,7 @@ export default function Hero() {
             {[
               { icon: Trophy, text: "200+ Branches Planned", delay: 0 },
               { icon: Zap, text: "Daily Payouts", delay: 0.1 },
-              { icon: Clock, text: "Instant Results", delay: 0.2 }
+              { icon: Clock, text: "Published Results", delay: 0.2 }
             ].map((item, index) => (
               <motion.div
                 key={index}

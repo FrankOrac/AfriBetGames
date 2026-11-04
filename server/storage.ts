@@ -1,10 +1,8 @@
 import { 
-  type User, 
-  type InsertUser, 
   type Game, 
   type InsertGame,
   type Bet,
-  type InsertBet,
+  type NewBet,
   type Result,
   type InsertResult,
   type Winning,
@@ -19,15 +17,12 @@ import {
   type InsertForumComment,
   type ContactInquiry,
   type InsertContactInquiry,
-  GameType
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { GAME_CATALOG } from "./game-catalog";
+import { DatabaseStorage } from "./database-storage";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  
   getGame(id: string): Promise<Game | undefined>;
   getGameByType(type: string): Promise<Game | undefined>;
   getAllGames(): Promise<Game[]>;
@@ -36,12 +31,13 @@ export interface IStorage {
   getBet(id: string): Promise<Bet | undefined>;
   getAllBets(): Promise<Bet[]>;
   getBetsByGame(gameId: string): Promise<Bet[]>;
-  createBet(bet: InsertBet): Promise<Bet>;
+  createBet(bet: NewBet): Promise<Bet>;
   
   getResult(id: string): Promise<Result | undefined>;
   getAllResults(): Promise<Result[]>;
   getResultsByGame(gameId: string): Promise<Result[]>;
   getLatestResult(gameId: string): Promise<Result | undefined>;
+  getFirstResultAfter(gameId: string, after: Date): Promise<Result | undefined>;
   createResult(result: InsertResult): Promise<Result>;
   
   getWinning(id: string): Promise<Winning | undefined>;
@@ -49,7 +45,7 @@ export interface IStorage {
   getAllWinnings(): Promise<Winning[]>;
   createWinning(winning: InsertWinning): Promise<Winning>;
 
-  updateBetOutcome(betId: string, status: string, payout: number | null, resultId: string): Promise<Bet | undefined>;
+  updateBetOutcome(betId: string, status: string, payout: number | null, resultId: string | null): Promise<Bet | undefined>;
   
   getGameCode(code: string): Promise<GameCode | undefined>;
   createGameCode(gameCode: InsertGameCode): Promise<GameCode>;
@@ -75,7 +71,6 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
   private games: Map<string, Game>;
   private bets: Map<string, Bet>;
   private results: Map<string, Result>;
@@ -87,7 +82,6 @@ export class MemStorage implements IStorage {
   private contactInquiries: Map<string, ContactInquiry>;
 
   constructor() {
-    this.users = new Map();
     this.games = new Map();
     this.bets = new Map();
     this.results = new Map();
@@ -99,99 +93,10 @@ export class MemStorage implements IStorage {
     this.contactInquiries = new Map();
     
     this.seedGames();
-    this.seedGameCodes();
-    this.seedForumPosts();
   }
 
   private seedGames() {
-    const gamesToSeed: InsertGame[] = [
-      {
-        type: GameType.VIRTUAL,
-        name: 'Virtual Betting',
-        description: 'Weekly rounds with countdown timer. Runs for 35 virtual weeks with instant results!',
-        minNumber: 0,
-        maxNumber: 40,
-        minOdds: 1.01,
-        maxOdds: 7.00,
-        numbersToSelect: 5,
-        minMatches: 3,
-        hasBonus: false,
-      },
-      {
-        type: GameType.MINOR,
-        name: 'Minor Game',
-        description: 'Main game category - Minor. Pick 5 numbers from 0-40 and match 3+ to win!',
-        minNumber: 0,
-        maxNumber: 40,
-        minOdds: 1.01,
-        maxOdds: 7.00,
-        numbersToSelect: 5,
-        minMatches: 3,
-        hasBonus: false,
-      },
-      {
-        type: GameType.MAJOR,
-        name: 'Major Game',
-        description: 'Main game category - Major. Pick 7 numbers from 0-60 and match 3+ to win big!',
-        minNumber: 0,
-        maxNumber: 60,
-        minOdds: 1.01,
-        maxOdds: 13.00,
-        numbersToSelect: 7,
-        minMatches: 3,
-        hasBonus: false,
-      },
-      {
-        type: GameType.MEGA,
-        name: 'Mega Game',
-        description: 'Main game category - Mega. Pick 10 numbers from 0-90 and match 5+ for mega wins!',
-        minNumber: 0,
-        maxNumber: 90,
-        minOdds: 1.01,
-        maxOdds: 17.00,
-        numbersToSelect: 10,
-        minMatches: 5,
-        hasBonus: false,
-      },
-      {
-        type: GameType.NOON,
-        name: 'Noon Game',
-        description: 'Daily noon draw at 12:00 PM. Pick 3 numbers plus bonus from 0-25!',
-        minNumber: 0,
-        maxNumber: 25,
-        minOdds: 1.01,
-        maxOdds: 12.00,
-        numbersToSelect: 3,
-        minMatches: 2,
-        hasBonus: true,
-      },
-      {
-        type: GameType.NIGHT,
-        name: 'Night Game',
-        description: 'Daily night draw at 12:00 AM. Pick 3 numbers plus bonus from 0-25!',
-        minNumber: 0,
-        maxNumber: 25,
-        minOdds: 1.01,
-        maxOdds: 12.00,
-        numbersToSelect: 3,
-        minMatches: 2,
-        hasBonus: true,
-      },
-      {
-        type: GameType.AVIATOR,
-        name: 'Number Aviator',
-        description: 'Fast-paced number predictions with multiplier bonuses. Select 3 numbers and watch your winnings soar!',
-        minNumber: 1,
-        maxNumber: 36,
-        minOdds: 3,
-        maxOdds: 8,
-        numbersToSelect: 3,
-        minMatches: 2,
-        hasBonus: false,
-      },
-    ];
-
-    gamesToSeed.forEach(game => {
+    GAME_CATALOG.forEach(game => {
       const id = randomUUID();
       this.games.set(id, { 
         ...game, 
@@ -203,6 +108,8 @@ export class MemStorage implements IStorage {
   }
 
   private seedForumPosts() {
+    /* Legacy demo testimonials are intentionally not loaded. Production must
+       never present fabricated community activity as genuine user content.
     const postsToSeed: Array<{ post: InsertForumPost; comments: string[] }> = [
       {
         post: {
@@ -396,24 +303,7 @@ export class MemStorage implements IStorage {
           createdAt: commentCreatedAt,
         });
       });
-    });
-  }
-
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    }); */
   }
 
   async getGame(id: string): Promise<Game | undefined> {
@@ -458,7 +348,7 @@ export class MemStorage implements IStorage {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
-  async createBet(insertBet: InsertBet): Promise<Bet> {
+  async createBet(insertBet: NewBet): Promise<Bet> {
     const id = randomUUID();
     const bet: Bet = {
       id,
@@ -495,6 +385,12 @@ export class MemStorage implements IStorage {
   async getLatestResult(gameId: string): Promise<Result | undefined> {
     const results = await this.getResultsByGame(gameId);
     return results[0];
+  }
+
+  async getFirstResultAfter(gameId: string, after: Date): Promise<Result | undefined> {
+    return Array.from(this.results.values())
+      .filter((result) => result.gameId === gameId && new Date(result.drawDate).getTime() >= after.getTime())
+      .sort((left, right) => new Date(left.drawDate).getTime() - new Date(right.drawDate).getTime())[0];
   }
 
   async createResult(insertResult: InsertResult): Promise<Result> {
@@ -542,7 +438,7 @@ export class MemStorage implements IStorage {
     return winning;
   }
 
-  async updateBetOutcome(betId: string, status: string, payout: number | null, resultId: string): Promise<Bet | undefined> {
+  async updateBetOutcome(betId: string, status: string, payout: number | null, resultId: string | null): Promise<Bet | undefined> {
     const bet = this.bets.get(betId);
     if (!bet) return undefined;
     
@@ -557,6 +453,8 @@ export class MemStorage implements IStorage {
   }
 
   private seedGameCodes() {
+    /* Legacy promotional codes are intentionally disabled. Operator-created
+       codes must be explicit, auditable, and stored in the production DB.
     const codes: InsertGameCode[] = [
       {
         code: 'WELCOME100',
@@ -582,29 +480,30 @@ export class MemStorage implements IStorage {
         usesRemaining: code.usesRemaining ?? null,
         createdAt: new Date(),
       });
-    });
+    }); */
   }
 
   async getGameCode(code: string): Promise<GameCode | undefined> {
-    return this.gameCodes.get(code);
+    return this.gameCodes.get(code.toUpperCase());
   }
 
   async createGameCode(insertGameCode: InsertGameCode): Promise<GameCode> {
     const id = randomUUID();
     const gameCode: GameCode = {
       id,
-      code: insertGameCode.code,
-      gameId: insertGameCode.gameId,
+      code: insertGameCode.code.toUpperCase(),
+      gameId: insertGameCode.gameId ?? null,
       expiresAt: insertGameCode.expiresAt ?? null,
       usesRemaining: insertGameCode.usesRemaining ?? null,
       createdAt: new Date(),
     };
-    this.gameCodes.set(insertGameCode.code, gameCode);
+    this.gameCodes.set(gameCode.code, gameCode);
     return gameCode;
   }
 
   async useGameCode(code: string): Promise<boolean> {
-    const gameCode = this.gameCodes.get(code);
+    const normalizedCode = code.toUpperCase();
+    const gameCode = this.gameCodes.get(normalizedCode);
     if (!gameCode) return false;
     
     if (gameCode.expiresAt && new Date(gameCode.expiresAt) < new Date()) {
@@ -618,7 +517,7 @@ export class MemStorage implements IStorage {
         ...gameCode,
         usesRemaining: gameCode.usesRemaining - 1,
       };
-      this.gameCodes.set(code, updatedCode);
+      this.gameCodes.set(normalizedCode, updatedCode);
     }
     
     return true;
@@ -747,4 +646,22 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+function createStorage(): IStorage {
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (databaseUrl) return new DatabaseStorage(databaseUrl);
+
+  // A public preview is deliberately read-only at the route layer. Allowing
+  // volatile catalog storage here keeps that preview deployable without
+  // pretending that it has production-grade persistence.
+  if (process.env.PUBLIC_PREVIEW_MODE === "true") {
+    return new MemStorage();
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("DATABASE_URL is required in production; refusing to use volatile in-memory storage");
+  }
+
+  return new MemStorage();
+}
+
+export const storage = createStorage();

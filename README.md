@@ -1,5 +1,7 @@
 # AfriBet Games & Entertainment
 
+> **Release status:** hardened preview/staging build. Real-money betting is disabled by default and must not be enabled until the regulatory, KYC/AML, payments, certified RNG, responsible-gaming, and security gates in [PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md) are completed.
+
 ![AfriBet Games Banner](https://via.placeholder.com/1200x300/22c55e/ffffff?text=AfriBet+Games+%26+Entertainment)
 
 > Africa's Premier Online Gaming Platform - Win Big, Play Smart, Get Paid Instantly
@@ -139,7 +141,8 @@ Present your winning ticket to claim your payout!
 - **Node.js 20** - Runtime environment
 - **Express.js** - Web framework
 - **TypeScript** - Full type safety
-- **In-memory Storage** - Fast data access (development)
+- **PostgreSQL + Drizzle ORM** - Required persistent storage in production
+- **In-memory Storage** - Local development only; production fails closed without `DATABASE_URL`
 - **QRCode Library** - Ticket verification
 
 ### Development Tools
@@ -361,7 +364,7 @@ AfriBet Games is committed to responsible gaming:
 
 ## 📝 License
 
-Copyright © 2025 AfriBet Games and Entertainment. All rights reserved.
+Copyright © 2026 AfriBet Games and Entertainment. All rights reserved.
 
 ## 🤝 Support
 

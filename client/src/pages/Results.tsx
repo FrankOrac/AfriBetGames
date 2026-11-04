@@ -1,42 +1,18 @@
-import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Clock, Sparkles } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { queryClient } from '@/lib/queryClient';
+import { Clock } from 'lucide-react';
 import type { Result, Game } from '@shared/schema';
 
 export default function Results() {
-  const { toast } = useToast();
-
   const { data: games = [] } = useQuery<Game[]>({
     queryKey: ['/api/games'],
   });
 
   const { data: results = [] } = useQuery<Result[]>({
     queryKey: ['/api/results'],
-  });
-
-  const generateResultMutation = useMutation({
-    mutationFn: async (gameId: string) => {
-      const response = await fetch(`/api/results/generate/${gameId}`, {
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error('Failed to generate result');
-      return await response.json();
-    },
-    onSuccess: (_, gameId) => {
-      const game = games.find(g => g.id === gameId);
-      toast({
-        title: 'New Result Generated!',
-        description: `${game?.name} results are now available`,
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/results'] });
-    },
   });
 
   const getGameName = (gameId: string) => {
@@ -69,34 +45,13 @@ export default function Results() {
             </p>
           </div>
 
-          <div className="mb-8 bg-card border rounded-lg p-6">
-            <h3 className="font-display font-semibold text-xl mb-4">Generate Demo Results</h3>
-            <p className="text-muted-foreground mb-4">
-              For demonstration purposes, you can generate random results for any game
-            </p>
-            <div className="flex flex-wrap gap-3">
-              {games.map(game => (
-                <Button
-                  key={game.id}
-                  variant="outline"
-                  onClick={() => generateResultMutation.mutate(game.id)}
-                  disabled={generateResultMutation.isPending}
-                  data-testid={`button-generate-${game.type}`}
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate {game.name}
-                </Button>
-              ))}
-            </div>
-          </div>
-
           {results.length === 0 ? (
             <Card className="p-12 text-center">
               <p className="text-xl text-muted-foreground mb-4">
                 No results available yet
               </p>
               <p className="text-sm text-muted-foreground">
-                Generate some results above to get started
+                Official results will appear here after they are published by the operator.
               </p>
             </Card>
           ) : (

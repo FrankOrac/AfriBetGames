@@ -208,14 +208,14 @@ export default function HowItWorks() {
     },
     {
       number: 3,
-      title: 'Instant Results',
+      title: 'Published Results',
       description: 'Get immediate results for Virtual games or check daily for Main, Mid-Week, and Weekend games.',
       icon: BarChart3,
     },
     {
       number: 4,
       title: 'Collect Winnings',
-      description: 'Matched numbers? Odds multiply your stake to calculate your winnings. Get paid instantly!',
+      description: 'Matched numbers use the published odds and disclosed payout cap to calculate the ticket result.',
       icon: Wallet,
     },
   ];

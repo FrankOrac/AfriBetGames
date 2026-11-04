@@ -80,87 +80,32 @@ export class GameLogic {
     betId: string
   ): { finalAmount: number; metadata: WinningMetadata } {
     const stats = this.getDailyStats();
-    
-    const houseEdgeMultiplier = (100 - this.config.houseEdgePercentage) / 100;
-    const winningAfterHouseEdge = baseWinning * houseEdgeMultiplier;
-    const houseEdgeApplied = winningAfterHouseEdge < baseWinning;
-    
+
+    // Published odds are the contract with the player. Any house margin must
+    // already be represented in those odds, never deducted after a win.
     const maxSingleWin = stakeAmount * this.config.maxSingleWinMultiplier;
-    const cappedByMaxWin = Math.min(winningAfterHouseEdge, maxSingleWin);
-    const singleWinCapApplied = cappedByMaxWin < winningAfterHouseEdge;
-    
-    const maxDailyPayout = stats.totalStakes * this.config.maxDailyPayoutRatio;
-    const availablePayout = Math.max(0, maxDailyPayout - stats.totalPayouts);
-    
-    const finalAmount = Math.min(cappedByMaxWin, availablePayout);
-    const dailyCapApplied = finalAmount < cappedByMaxWin;
+    const finalAmount = Math.min(baseWinning, maxSingleWin);
+    const singleWinCapApplied = finalAmount < baseWinning;
     const roundedFinal = Math.floor(finalAmount * 100) / 100;
 
     // Store metadata for this winning (immutable) - track ALL caps separately
     const metadata: WinningMetadata = {
-      houseEdgeApplied,
+      houseEdgeApplied: false,
       singleWinCapApplied,
-      dailyCapApplied,
-      cappedFromHouseEdge: houseEdgeApplied ? baseWinning : undefined,
-      cappedFromSingleWin: singleWinCapApplied ? winningAfterHouseEdge : undefined,
-      cappedFromDaily: dailyCapApplied ? cappedByMaxWin : undefined,
+      dailyCapApplied: false,
+      cappedFromSingleWin: singleWinCapApplied ? baseWinning : undefined,
     };
     this.winningMetadata.set(betId, metadata);
 
-    // Log when caps are applied for audit trail
-    if (singleWinCapApplied && dailyCapApplied) {
-      // Both caps applied
-      const singleWinDelta = winningAfterHouseEdge - cappedByMaxWin;
-      const dailyDelta = cappedByMaxWin - roundedFinal;
-      
-      this.payoutEvents.push({
-        timestamp: new Date(),
-        amount: roundedFinal,
-        cappedFrom: winningAfterHouseEdge,
-        limitType: 'single_win_cap',
-      });
-      
-      this.payoutEvents.push({
-        timestamp: new Date(),
-        amount: roundedFinal,
-        cappedFrom: cappedByMaxWin,
-        limitType: 'daily_cap',
-      });
-
-      console.log(`[GameLogic] Multiple caps applied: Single win -${singleWinDelta.toFixed(2)}, Daily -${dailyDelta.toFixed(2)}`);
-      stats.cappedPayouts += (singleWinDelta + dailyDelta);
-    } else if (singleWinCapApplied) {
-      // Only single win cap applied
-      const delta = winningAfterHouseEdge - roundedFinal;
-      this.payoutEvents.push({
-        timestamp: new Date(),
-        amount: roundedFinal,
-        cappedFrom: winningAfterHouseEdge,
-        limitType: 'single_win_cap',
-      });
-
-      console.log(`[GameLogic] Single win cap applied: ${winningAfterHouseEdge.toFixed(2)} -> ${roundedFinal.toFixed(2)}`);
-      stats.cappedPayouts += delta;
-    } else if (dailyCapApplied) {
-      // Only daily cap applied
-      const delta = cappedByMaxWin - roundedFinal;
-      this.payoutEvents.push({
-        timestamp: new Date(),
-        amount: roundedFinal,
-        cappedFrom: cappedByMaxWin,
-        limitType: 'daily_cap',
-      });
-
-      console.log(`[GameLogic] Daily cap applied: ${cappedByMaxWin.toFixed(2)} -> ${roundedFinal.toFixed(2)}`);
-      stats.cappedPayouts += delta;
-    } else if (houseEdgeApplied) {
-      // Only house edge applied (for audit only, not counted as "capped")
+    if (singleWinCapApplied) {
+      const delta = baseWinning - roundedFinal;
       this.payoutEvents.push({
         timestamp: new Date(),
         amount: roundedFinal,
         cappedFrom: baseWinning,
-        limitType: 'house_edge',
+        limitType: 'single_win_cap',
       });
+      stats.cappedPayouts += delta;
     }
     
     return {
@@ -215,4 +160,8 @@ export class GameLogic {
   }
 }
 
-export const gameLogic = new GameLogic();
+export const gameLogic = new GameLogic({
+  houseEdgePercentage: Number(process.env.HOUSE_EDGE_PERCENTAGE ?? 15),
+  maxDailyPayoutRatio: Number(process.env.MAX_DAILY_PAYOUT_RATIO ?? 0.75),
+  maxSingleWinMultiplier: Number(process.env.MAX_SINGLE_WIN_MULTIPLIER ?? 1000),
+});

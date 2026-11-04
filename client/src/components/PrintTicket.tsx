@@ -27,8 +27,7 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
 
   useEffect(() => {
     if (ticket?.ticketId) {
-      const shortCode = ticket.ticketId.slice(0, 8).toUpperCase();
-      const qrData = `AFRIBET-${shortCode}`;
+      const qrData = `AFRIBET-TICKET:${ticket.ticketId}`;
       
       QRCode.toDataURL(qrData, {
         width: 120,
@@ -297,7 +296,7 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
           <DialogDescription>
             {isPending 
               ? 'Review your bet details below. Click Print or Save PDF to keep a copy.' 
-              : 'Your official results ticket. Print or save for your records.'}
+              : 'Your results ticket. Print or save it for your records.'}
           </DialogDescription>
         </DialogHeader>
         
@@ -308,7 +307,7 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
             <div className="header">
               <div className="brand">AFRIBET GAMES</div>
               <div className="subtitle">
-                {isPending ? 'OFFICIAL BET SLIP' : 'RESULTS TICKET'}
+                {isPending ? 'BET SLIP' : 'RESULTS TICKET'}
               </div>
               <div className="subtitle" style={{ fontSize: '8px', marginTop: '2px' }}>
                 {ticket.gameName.toUpperCase()}
@@ -318,7 +317,7 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
             {/* Ticket ID & QR Code */}
             <div className="section">
               <div className="row">
-                <span className="label">TICKET CODE:</span>
+                <span className="label">REFERENCE:</span>
                 <span className="value highlight" style={{ fontFamily: 'monospace', fontSize: '12px' }}>
                   {shortCode}
                 </span>
@@ -344,14 +343,14 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
               {qrCodeUrl ? (
                 <>
                   <div className="qr-text" style={{ marginBottom: '8px', fontSize: '11px' }}>
-                    Scan to verify authenticity
+                    Scan to retrieve this ticket reference
                   </div>
                   <img 
                     src={qrCodeUrl} 
                     alt="QR Code" 
                     className="qr-code"
                   />
-                  <div className="authentic-badge">✓ AUTHENTIC TICKET</div>
+                  <div className="authentic-badge">✓ REFERENCE EMBEDDED</div>
                 </>
               ) : (
                 <div className="qr-text" style={{ padding: '20px', fontSize: '11px' }}>
@@ -512,7 +511,7 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
                 </div>
               )}
               <div style={{ marginBottom: '2px' }}>
-                Customer Service: www.afribet.com
+                Customer Service: www.afribetgames.com
               </div>
               <div style={{ fontSize: '7px', marginTop: '3px', fontStyle: 'italic' }}>
                 Valid only with QR code • No duplicates accepted
@@ -529,7 +528,7 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
           <p className="text-sm text-muted-foreground">
             {isPending 
               ? 'Keep this betting slip safe. You\'ll need it to claim your winnings if you win.'
-              : 'This ticket contains your official results. Save it for your records.'}
+              : 'This ticket contains the published result linked to this reference. Save it for your records.'}
           </p>
           <div className="flex gap-2">
             <Button 

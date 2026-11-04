@@ -1,5 +1,7 @@
 # AfriBet Games - Deployment Guide
 
+> Production deployments require PostgreSQL and start in preview mode with betting disabled. Read `PRODUCTION_READINESS.md` before deployment.
+
 This application supports multiple deployment options:
 
 ## 1. Vercel Deployment (Recommended for Production)
@@ -34,12 +36,10 @@ This application supports multiple deployment options:
    ```
 
 ### Important Notes for Vercel
-- **Serverless Functions**: All API routes run as serverless functions
-- **In-Memory Storage**: The current in-memory storage will reset between requests on Vercel. For production, you should:
-  - Set up a database (PostgreSQL recommended)
-  - Update the storage implementation to use the database
-  - Or use Vercel KV for simple key-value storage
-- **Environment Variables**: Set any required environment variables in Vercel dashboard
+- **Serverless Functions**: All API routes run as serverless functions.
+- **PostgreSQL**: Set `DATABASE_URL`; the app refuses volatile in-memory storage in production.
+- **Migrations**: Apply the checked-in migrations before routing production traffic.
+- **Environment Variables**: Copy the required values from `.env.example` and keep capability flags disabled initially.
 - **Build Output**: Frontend builds to `dist/public`, API functions in `api/` directory
 
 ---
@@ -147,26 +147,9 @@ pm2 stop afribet-games     # Stop app
 
 ---
 
-## Database Considerations
+## Database considerations
 
-### Current Setup
-- Uses **in-memory storage** (MemStorage)
-- Data resets on server restart
-- **Not suitable for production on Vercel** (serverless resets memory)
-
-### For Production Deployment
-You should migrate to a persistent database:
-
-1. **PostgreSQL** (recommended):
-   - Neon (serverless PostgreSQL, works great with Vercel)
-   - Supabase
-   - Railway
-   - Your own PostgreSQL instance
-
-2. **Update Storage Implementation**:
-   - Replace `MemStorage` in `server/storage.ts` with database implementation
-   - Use Drizzle ORM (already configured) with PostgreSQL
-   - Run migrations: `npm run db:push`
+PostgreSQL storage is implemented and selected automatically when `DATABASE_URL` is present. In-memory storage remains available only outside production for local development. Apply the migration under `migrations/` before deployment.
 
 ---
 

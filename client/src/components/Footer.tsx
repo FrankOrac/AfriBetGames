@@ -12,7 +12,7 @@ export default function Footer() {
               <Logo size="medium" showText={true} />
             </div>
             <p className="text-sm text-muted-foreground">
-              Africa's premier gaming platform. Win big, play smart, get paid instantly.
+              Number games, private ticket references, and clearly published draw results.
             </p>
           </div>
 
@@ -20,24 +20,24 @@ export default function Footer() {
             <h3 className="font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#games" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/#games" className="text-muted-foreground hover:text-foreground transition-colors">
                   Games
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#how-to-play" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/#how-to-play" className="text-muted-foreground hover:text-foreground transition-colors">
                   How to Play
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#results" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/results" className="text-muted-foreground hover:text-foreground transition-colors">
                   Results
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#about" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/#about" className="text-muted-foreground hover:text-foreground transition-colors">
                   About
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -78,9 +78,9 @@ export default function Footer() {
         </div>
 
         <div className="pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>© 2025 AfriBet Games and Entertainment. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} AfriBet Games and Entertainment. All rights reserved.</p>
           <p className="mt-2">
-            Play responsibly. Must be 18+ to participate. AfriBet Games is committed to responsible gaming.
+            Play responsibly. Participation is restricted to the legal gambling age in your jurisdiction.
           </p>
         </div>
       </div>

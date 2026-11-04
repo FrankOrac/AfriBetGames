@@ -1,5 +1,7 @@
 # Deploying AfriBet Games to Vercel
 
+> Deploy first with `BETTING_ENABLED=false`. This repository is a hardened preview until every gate in `PRODUCTION_READINESS.md` is complete.
+
 ## Quick Start
 
 1. **Push your code to GitHub/GitLab/Bitbucket**
@@ -13,7 +15,7 @@
 
 ## Important: Database Setup
 
-⚠️ **Critical**: The app currently uses in-memory storage which will NOT work on Vercel (serverless resets memory).
+⚠️ **Critical**: Set `DATABASE_URL`. Production intentionally refuses to start with volatile in-memory storage.
 
 ### Option 1: Use Neon (Recommended - Free Tier Available)
 
@@ -23,7 +25,7 @@
    ```
    DATABASE_URL=your_neon_connection_string
    ```
-4. Update `server/storage.ts` to use PostgreSQL instead of MemStorage
+4. Run `npm run db:migrate` against the database before production traffic
 
 ### Option 2: Use Vercel Postgres
 
@@ -31,14 +33,7 @@
 2. Go to "Storage" tab
 3. Create a new Postgres database
 4. Connect it to your project
-5. Update `server/storage.ts` to use PostgreSQL
-
-### Option 3: Use Vercel KV (Simple Key-Value)
-
-1. In your Vercel project dashboard
-2. Go to "Storage" tab  
-3. Create a new KV database
-4. Update storage implementation to use KV
+5. Run `npm run db:migrate` before production traffic
 
 ## Environment Variables
 
@@ -47,6 +42,10 @@ Set these in Vercel Dashboard → Settings → Environment Variables:
 ```
 NODE_ENV=production
 DATABASE_URL=your_database_connection_string
+ADMIN_API_KEY=a-long-random-secret
+BETTING_ENABLED=false
+COMMUNITY_POSTING_ENABLED=false
+DEMO_DRAW_GENERATION_ENABLED=false
 ```
 
 ## Vercel Configuration
@@ -99,10 +98,10 @@ Vercel Deployment
 - Ensure `api/index.ts` exists
 - Check function logs in Vercel dashboard
 
-### Data Not Persisting
-- You're still using in-memory storage
-- Set up a database (see above)
-- Update storage implementation
+### API returns a database configuration error
+- Confirm `DATABASE_URL` is set for Preview and Production environments
+- Apply the checked-in migration
+- Confirm the database permits TLS connections from Vercel
 
 ### Build Fails
 - Check build logs in Vercel dashboard

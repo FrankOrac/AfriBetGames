@@ -1,4 +1,4 @@
-import { GameType } from "@shared/schema";
+import { GameType } from "@shared/game-types";
 
 export function getNextDrawDate(gameType: string): Date {
   const now = new Date();

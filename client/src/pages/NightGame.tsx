@@ -12,7 +12,8 @@ import StakeInput from '@/components/StakeInput';
 import WinningsCalculator from '@/components/WinningsCalculator';
 import PrintTicket from '@/components/PrintTicket';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest } from '@/lib/queryClient';
+import { saveTicketId } from '@/lib/tickets';
 import type { Game, Bet, Result } from '@shared/schema';
 
 export default function NightGame() {
@@ -76,74 +77,19 @@ export default function NightGame() {
     onSuccess: async (response) => {
       const betResponse = await response.json();
       setCurrentBetId(betResponse.id);
-      queryClient.invalidateQueries({ queryKey: ['/api/bets'] });
+      saveTicketId(betResponse.id);
       
       toast({
         title: 'Bet Placed Successfully!',
         description: `Your Night Game bet has been placed. Draw at 12:00 AM.`,
       });
 
-      // For demo purposes, generate instant result
-      if (game) {
-        setTimeout(() => {
-          generateResultMutation.mutate(game.id);
-        }, 2000);
-      }
     },
     onError: () => {
       toast({
         title: 'Failed to Place Bet',
         description: 'Please try again.',
         variant: 'destructive',
-      });
-    },
-  });
-
-  const generateResultMutation = useMutation({
-    mutationFn: async (gameId: string) => {
-      const response = await fetch(`/api/results/generate/${gameId}`, {
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error('Failed to generate result');
-      return await response.json() as Result;
-    },
-    onSuccess: async (result) => {
-      setGeneratedResult(result);
-      queryClient.invalidateQueries({ queryKey: ['/api/results'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/winnings'] });
-      
-      if (currentBetId) {
-        try {
-          const checkResponse = await fetch(`/api/winnings/check/${currentBetId}`, {
-            method: 'POST',
-          });
-          const outcomeData = await checkResponse.json();
-          setBetOutcome(outcomeData);
-          
-          queryClient.invalidateQueries({ queryKey: ['/api/bets', currentBetId, 'ticket'] });
-          queryClient.invalidateQueries({ queryKey: ['/api/bets', currentBetId] });
-          
-          if (outcomeData.won) {
-            toast({
-              title: '🎉 Night Game Winner!',
-              description: outcomeData.message || `You won ₦${outcomeData.winning.winningAmount.toLocaleString()}!`,
-            });
-          } else {
-            toast({
-              title: 'Better Luck Next Time',
-              description: outcomeData.message || 'No winning numbers matched',
-              variant: 'destructive',
-            });
-          }
-        } catch (error) {
-          console.error('Failed to check outcome:', error);
-        }
-      }
-      
-      const winningNums = JSON.parse(result.winningNumbers) as number[];
-      toast({
-        title: 'Night Draw Complete!',
-        description: `Winning numbers: ${winningNums.join(', ')}${result.bonusNumber ? ` + Bonus: ${result.bonusNumber}` : ''}`,
       });
     },
   });
@@ -306,7 +252,7 @@ export default function NightGame() {
                   <CardContent>
                     <PrintTicket betId={currentBetId} autoOpen={false} />
                     <p className="text-sm text-indigo-600 dark:text-indigo-400 mt-4 text-center">
-                      ⏳ Results will be generated in a moment...
+                      Results will be available after the official midnight draw is published.
                     </p>
                   </CardContent>
                 </Card>

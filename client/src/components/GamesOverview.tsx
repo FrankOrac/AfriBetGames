@@ -9,7 +9,7 @@ export default function GamesOverview() {
   const games = [
     {
       title: 'Virtual Betting',
-      description: 'Weekly rounds with countdown timer. Runs for 35 virtual weeks with instant results!',
+      description: 'Weekly rounds with a countdown and published draw results across a 35-week cycle.',
       icon: Zap,
       numberRange: '0-40',
       oddsRange: '1-7',
@@ -162,7 +162,7 @@ export default function GamesOverview() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            Multiple ways to win with instant results and favorable odds. Pick your game and start playing today.
+            Explore each game’s number range, selection rules, odds, and draw schedule before participating.
           </motion.p>
 
           {/* Decorative sparkles */}

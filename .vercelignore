@@ -1,12 +1,7 @@
-node_modules
-.git
-.env
-.env.local
-.replit
-.upm
-.cache
-.local
-tmp
+# Vercel must see the bundled API entry during source discovery. The build
+# recreates api/index.js from server/vercel-handler.ts before deployment.
+dist/
+
+# Local-only artifacts.
+coverage/
 *.log
-npm-debug.log*
-.DS_Store

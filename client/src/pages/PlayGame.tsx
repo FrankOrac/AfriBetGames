@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { ArrowLeft, Check, Clock } from 'lucide-react';
@@ -12,7 +12,7 @@ import StakeInput from '@/components/StakeInput';
 import WinningsCalculator from '@/components/WinningsCalculator';
 import PrintTicket from '@/components/PrintTicket';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { saveTicketId } from '@/lib/tickets';
 import type { Game, Bet, Result } from '@shared/schema';
 
 const VIRTUAL_GAME_TYPES = ['virtual', 'aviator', 'lucky_numbers', 'super_virtual'];
@@ -45,90 +45,6 @@ export default function PlayGame() {
 
   const isVirtualGame = game && VIRTUAL_GAME_TYPES.includes(game.type);
 
-  useEffect(() => {
-    if (countdown === null || countdown < 0) return;
-
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev === null || prev <= 0) {
-          return prev;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [countdown]);
-
-  useEffect(() => {
-    if (countdown === 0 && currentBetId && game) {
-      generateResultMutation.mutate(game.id);
-    }
-  }, [countdown, currentBetId, game]);
-
-  const generateResultMutation = useMutation({
-    mutationFn: async (gameId: string) => {
-      const response = await fetch(`/api/results/generate/${gameId}`, {
-        method: 'POST',
-      });
-      if (!response.ok) {
-        throw new Error('Failed to generate result');
-      }
-      return await response.json() as Result;
-    },
-    onSuccess: async (result) => {
-      setGeneratedResult(result);
-      setCountdown(null);
-      queryClient.invalidateQueries({ queryKey: ['/api/results'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/winnings'] });
-      
-      // Check win/loss outcome for the current bet
-      if (currentBetId) {
-        try {
-          const checkResponse = await fetch(`/api/winnings/check/${currentBetId}`, {
-            method: 'POST',
-          });
-          const outcomeData = await checkResponse.json();
-          setBetOutcome(outcomeData);
-          
-          // Invalidate ticket query to refresh with updated status
-          queryClient.invalidateQueries({ queryKey: ['/api/bets', currentBetId, 'ticket'] });
-          queryClient.invalidateQueries({ queryKey: ['/api/bets', currentBetId] });
-          
-          if (outcomeData.won) {
-            toast({
-              title: '🎉 Congratulations! You Won!',
-              description: outcomeData.message || `You won ₦${outcomeData.winning.winningAmount.toLocaleString()}!`,
-            });
-          } else {
-            toast({
-              title: 'Better Luck Next Time',
-              description: outcomeData.message || 'No winning numbers matched',
-              variant: 'destructive',
-            });
-          }
-        } catch (error) {
-          console.error('Failed to check outcome:', error);
-        }
-      }
-      
-      const winningNums = JSON.parse(result.winningNumbers) as number[];
-      toast({
-        title: 'Results Are In!',
-        description: `Winning numbers: ${winningNums.join(', ')}${result.bonusNumber ? ` + Bonus: ${result.bonusNumber}` : ''}`,
-      });
-    },
-    onError: () => {
-      toast({
-        title: 'Failed to Generate Results',
-        description: 'Please try again.',
-        variant: 'destructive',
-      });
-      setCountdown(null);
-      setCurrentBetId(null);
-    },
-  });
-
   const placeBetMutation = useMutation({
     mutationFn: async () => {
       if (!game) throw new Error('Game not found');
@@ -153,22 +69,12 @@ export default function PlayGame() {
       return await response.json() as Bet;
     },
     onSuccess: (data) => {
+      saveTicketId(data.id);
+      setCurrentBetId(data.id);
       toast({
         title: 'Bet Placed Successfully!',
-        description: isVirtualGame 
-          ? `Results in ${COUNTDOWN_SECONDS} seconds...`
-          : `Bet ID: ${data.id.slice(0, 8)}... Potential winning: ₦${data.potentialWinning?.toLocaleString()}`,
+        description: `Ticket saved. Results will be settled after the official draw.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/bets'] });
-      
-      if (isVirtualGame) {
-        setCurrentBetId(data.id);
-        setCountdown(COUNTDOWN_SECONDS);
-      } else {
-        setSelectedNumbers([]);
-        setBonusNumber(undefined);
-        setStakeAmount(1000);
-      }
     },
     onError: () => {
       toast({
@@ -361,11 +267,9 @@ export default function PlayGame() {
                   <div>
                     <h1 className="font-display font-bold text-3xl">{game.name}</h1>
                     <p className="text-muted-foreground">{game.description}</p>
-                    {isVirtualGame && (
-                      <p className="text-sm text-primary font-medium mt-1">
-                        ⚡ Instant results in {COUNTDOWN_SECONDS} seconds
-                      </p>
-                    )}
+                    <p className="text-sm text-primary font-medium mt-1">
+                      Results are settled only from the published official draw.
+                    </p>
                   </div>
                 </div>
 
@@ -448,7 +352,7 @@ export default function PlayGame() {
                 </>
               )}
 
-              {(countdown !== null || generatedResult) && (
+              {(currentBetId || generatedResult) && (
                 <Card className="p-6">
                   <div className="text-center space-y-3">
                     <p className="text-sm text-muted-foreground">Your Bet</p>
@@ -473,6 +377,7 @@ export default function PlayGame() {
                     <p className="font-semibold text-lg">
                       Stake: ₦{stakeAmount.toLocaleString()}
                     </p>
+                    {currentBetId && <PrintTicket betId={currentBetId} />}
                   </div>
                 </Card>
               )}

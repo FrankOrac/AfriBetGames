@@ -1,20 +1,24 @@
 import { Switch, Route } from "wouter";
+import { lazy, Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { CountryProvider } from "@/providers/CountryProvider";
-import Home from "@/pages/Home";
-import PlayGame from "@/pages/PlayGame";
-import MainGame from "@/pages/MainGame";
-import NoonGame from "@/pages/NoonGame";
-import NightGame from "@/pages/NightGame";
-import VirtualBetting from "@/pages/VirtualBetting";
-import Results from "@/pages/Results";
-import Dashboard from "@/pages/Dashboard";
-import Forum from "@/pages/Forum";
-import NotFound from "@/pages/not-found";
+import AgeGate from "@/components/AgeGate";
+import PlatformNotice from "@/components/PlatformNotice";
+
+const Home = lazy(() => import("@/pages/Home"));
+const PlayGame = lazy(() => import("@/pages/PlayGame"));
+const MainGame = lazy(() => import("@/pages/MainGame"));
+const NoonGame = lazy(() => import("@/pages/NoonGame"));
+const NightGame = lazy(() => import("@/pages/NightGame"));
+const VirtualBetting = lazy(() => import("@/pages/VirtualBetting"));
+const Results = lazy(() => import("@/pages/Results"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Forum = lazy(() => import("@/pages/Forum"));
+const NotFound = lazy(() => import("@/pages/not-found"));
 
 function Router() {
   return (
@@ -40,7 +44,11 @@ function App() {
         <CountryProvider>
           <TooltipProvider>
             <Toaster />
-            <Router />
+            <AgeGate />
+            <PlatformNotice />
+            <Suspense fallback={<div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>}>
+              <Router />
+            </Suspense>
           </TooltipProvider>
         </CountryProvider>
       </ThemeProvider>

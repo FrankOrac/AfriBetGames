@@ -1,7 +1,13 @@
 node_modules
 dist
+.env
+.env.*
+!.env.example
+coverage
+*.log
 .DS_Store
 server/public
 vite.config.ts.*
 *.tar.gz
-api/index.js
+# api/index.js is the checked-in Vercel function entry. The production build
+# regenerates it from server/vercel-handler.ts to keep it in sync.

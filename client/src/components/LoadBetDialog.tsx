@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import PrintTicket from '@/components/PrintTicket';
 import { useToast } from '@/hooks/use-toast';
+import { saveTicketId } from '@/lib/tickets';
 
 export default function LoadBetDialog() {
   const [open, setOpen] = useState(false);
@@ -25,7 +26,7 @@ export default function LoadBetDialog() {
     if (!betCode.trim()) {
       toast({
         title: 'Enter Bet Code',
-        description: 'Please enter a bet ID or short code',
+        description: 'Please enter the complete ticket ID',
         variant: 'destructive',
       });
       return;
@@ -33,19 +34,8 @@ export default function LoadBetDialog() {
 
     setLoading(true);
     try {
-      let betId = betCode.trim();
-      
-      // If it's a short code (8 characters), search for the full bet ID first
-      if (betId.length === 8) {
-        const searchResponse = await fetch(`/api/bets/search/${betId}`);
-        
-        if (!searchResponse.ok) {
-          throw new Error('Bet not found with that short code');
-        }
-        
-        const searchData = await searchResponse.json();
-        betId = searchData.betId;
-      }
+      const betId = betCode.trim().toLowerCase();
+      if (!/^[0-9a-f-]{36}$/.test(betId)) throw new Error('Invalid ticket ID');
       
       // Now fetch the full ticket using the bet ID
       const response = await fetch(`/api/bets/${betId}/ticket`);
@@ -56,6 +46,7 @@ export default function LoadBetDialog() {
 
       const ticketData = await response.json();
       setTicket(ticketData);
+      saveTicketId(ticketData.ticketId);
       
       toast({
         title: 'Bet Found!',
@@ -91,7 +82,7 @@ export default function LoadBetDialog() {
         <DialogHeader>
           <DialogTitle>Load Bet Ticket</DialogTitle>
           <DialogDescription>
-            Enter your bet ID or short code to retrieve your ticket
+            Enter the complete 36-character ticket ID to retrieve your private ticket
           </DialogDescription>
         </DialogHeader>
 
@@ -99,7 +90,7 @@ export default function LoadBetDialog() {
           {/* Search Input */}
           <div className="flex gap-2">
             <Input
-              placeholder="Enter Bet ID or Short Code (e.g., 1A2B3C4D)"
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
               value={betCode}
               onChange={(e) => setBetCode(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && handleLoadBet()}
@@ -135,7 +126,7 @@ export default function LoadBetDialog() {
                       <span className="font-mono font-bold">{ticket.ticketId}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Short Code:</span>
+                      <span className="text-muted-foreground">Reference:</span>
                       <span className="font-mono font-semibold">{ticket.ticketId.slice(0, 8).toUpperCase()}</span>
                     </div>
                   </div>
@@ -238,9 +229,9 @@ export default function LoadBetDialog() {
           {/* Help Text */}
           {!ticket && (
             <div className="text-center text-sm text-muted-foreground bg-muted/30 p-4 rounded">
-              <p className="font-medium mb-2">How to find your bet code:</p>
+              <p className="font-medium mb-2">How to find your ticket ID:</p>
               <ul className="text-xs space-y-1">
-                <li>• Check your printed ticket for the Short Code</li>
+                <li>• Scan the QR code or copy the full ID from your printed ticket</li>
                 <li>• Look in your Dashboard for recent bets</li>
                 <li>• The code is shown after placing a bet</li>
               </ul>

@@ -1,10 +1,25 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import { randomInt } from "node:crypto";
+import { z } from "zod";
 import { storage } from "./storage";
 import { insertBetSchema, insertResultSchema, insertWinningSchema, insertGameCodeSchema, insertAviatorSessionSchema, insertForumPostSchema, insertForumCommentSchema, insertContactInquirySchema } from "@shared/schema";
 import { gameLogic } from "./game-logic";
+import { requireAdmin } from "./security";
+import { validateBetForGame, validateResultForGame } from "./validation";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
+  const publicPreviewMode = process.env.PUBLIC_PREVIEW_MODE === "true";
+  const bettingEnabled = process.env.BETTING_ENABLED === "true" || process.env.NODE_ENV !== "production";
+  const demoDrawsEnabled = process.env.DEMO_DRAW_GENERATION_ENABLED === "true" && process.env.NODE_ENV !== "production";
+
+  app.get("/api/capabilities", (_req, res) => {
+    res.json({
+      bettingEnabled,
+      communityPostingEnabled: process.env.COMMUNITY_POSTING_ENABLED === "true" || process.env.NODE_ENV !== "production",
+      contactSubmissionsEnabled: !publicPreviewMode,
+      realMoneyPaymentsEnabled: false,
+    });
+  });
   
   // Get all games
   app.get("/api/games", async (_req, res) => {
@@ -32,6 +47,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Place a bet
   app.post("/api/bets", async (req, res) => {
     try {
+      if (!bettingEnabled) {
+        return res.status(503).json({ error: "Bet placement is disabled until production compliance checks are complete" });
+      }
       const validatedBet = insertBetSchema.parse(req.body);
       
       // Get the game to calculate potential winnings
@@ -40,21 +58,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Game not found" });
       }
 
+      const gameValidation = validateBetForGame(validatedBet, game);
+      if (!gameValidation.ok) {
+        return res.status(400).json({ error: "Invalid bet", details: gameValidation.errors });
+      }
+
       // Record stake for daily tracking
-      gameLogic.recordStake(validatedBet.stakeAmount);
+      gameLogic.recordStake(gameValidation.value.stakeAmount);
 
       // Calculate theoretical maximum winning with house edge (independent of daily limits)
       const baseMaxWinning = validatedBet.selectedNumbers.length === game.numbersToSelect
-        ? Math.pow(game.maxOdds, game.minMatches) * validatedBet.stakeAmount
-        : validatedBet.stakeAmount;
+        ? Math.pow(game.maxOdds, game.minMatches) * gameValidation.value.stakeAmount
+        : gameValidation.value.stakeAmount;
 
-      // Apply only house edge to show theoretical maximum (don't apply daily limits yet)
-      const houseEdgeMultiplier = (100 - gameLogic.getConfig().houseEdgePercentage) / 100;
-      const theoreticalMaxWinning = baseMaxWinning * houseEdgeMultiplier;
+      const theoreticalMaxWinning = Math.min(
+        baseMaxWinning,
+        gameLogic.getConfig().maxSingleWinMultiplier * gameValidation.value.stakeAmount,
+      );
 
       const bet = await storage.createBet({
-        ...validatedBet,
-        potentialWinning: theoreticalMaxWinning,
+        ...gameValidation.value,
+        potentialWinning: Math.round(theoreticalMaxWinning * 100) / 100,
       });
       
       res.status(201).json(bet);
@@ -67,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all bets
-  app.get("/api/bets", async (_req, res) => {
+  app.get("/api/bets", requireAdmin, async (_req, res) => {
     try {
       const bets = await storage.getAllBets();
       res.json(bets);
@@ -89,16 +113,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Search bet by short code (first 8 characters of ID)
+  // Resolve a ticket only from its full high-entropy ID.
   app.get("/api/bets/search/:code", async (req, res) => {
     try {
-      const code = req.params.code.toLowerCase();
-      if (code.length !== 8) {
-        return res.status(400).json({ error: "Short code must be 8 characters" });
+      const code = req.params.code.toLowerCase().trim();
+      if (!/^[0-9a-f-]{36}$/.test(code)) {
+        return res.status(400).json({ error: "Enter the complete 36-character ticket ID" });
       }
 
-      const allBets = await storage.getAllBets();
-      const foundBet = allBets.find(bet => bet.id.toLowerCase().startsWith(code));
+      const foundBet = await storage.getBet(code);
 
       if (!foundBet) {
         return res.status(404).json({ error: "Bet not found with that code" });
@@ -111,10 +134,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a result
-  app.post("/api/results", async (req, res) => {
+  app.post("/api/results", requireAdmin, async (req, res) => {
     try {
       const validatedResult = insertResultSchema.parse(req.body);
-      const result = await storage.createResult(validatedResult);
+      const game = await storage.getGame(validatedResult.gameId);
+      if (!game) return res.status(404).json({ error: "Game not found" });
+      const gameValidation = validateResultForGame(validatedResult, game);
+      if (!gameValidation.ok) {
+        return res.status(400).json({ error: "Invalid result", details: gameValidation.errors });
+      }
+      const result = await storage.createResult(gameValidation.value);
       res.status(201).json(result);
     } catch (error) {
       if (error instanceof Error && 'issues' in error) {
@@ -165,8 +194,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Bet not found" });
       }
 
-      // Get the latest result for the game
-      const result = await storage.getLatestResult(bet.gameId);
+      // Only a draw published after the bet was accepted can settle it.
+      const result = await storage.getFirstResultAfter(bet.gameId, new Date(bet.createdAt));
       if (!result) {
         return res.status(404).json({ error: "No results available for this game yet" });
       }
@@ -326,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all winnings
-  app.get("/api/winnings", async (_req, res) => {
+  app.get("/api/winnings", requireAdmin, async (_req, res) => {
     try {
       const winnings = await storage.getAllWinnings();
       res.json(winnings);
@@ -336,8 +365,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate random result for a game (for demo purposes)
-  app.post("/api/results/generate/:gameId", async (req, res) => {
+  app.post("/api/results/generate/:gameId", requireAdmin, async (req, res) => {
     try {
+      if (!demoDrawsEnabled) {
+        return res.status(403).json({ error: "Demo draw generation is disabled" });
+      }
       const game = await storage.getGame(req.params.gameId);
       if (!game) {
         return res.status(404).json({ error: "Game not found" });
@@ -346,22 +378,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate random winning numbers
       const winningNumbers: number[] = [];
       while (winningNumbers.length < game.numbersToSelect) {
-        const randomNum = Math.floor(Math.random() * (game.maxNumber - game.minNumber + 1)) + game.minNumber;
+        const randomNum = randomInt(game.minNumber, game.maxNumber + 1);
         if (!winningNumbers.includes(randomNum)) {
           winningNumbers.push(randomNum);
         }
       }
 
       // Generate random odds for each number
-      const odds = winningNumbers.map(() => 
-        Math.floor(Math.random() * (game.maxOdds - game.minOdds + 1)) + game.minOdds
+      const odds = winningNumbers.map(() =>
+        randomInt(Math.ceil(game.minOdds * 100), Math.floor(game.maxOdds * 100) + 1) / 100
       );
 
       // Generate bonus number if applicable
       let bonusNumber: number | undefined;
       if (game.hasBonus) {
         do {
-          bonusNumber = Math.floor(Math.random() * (game.maxNumber - game.minNumber + 1)) + game.minNumber;
+          bonusNumber = randomInt(game.minNumber, game.maxNumber + 1);
         } while (winningNumbers.includes(bonusNumber));
       }
 
@@ -380,7 +412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get daily statistics
-  app.get("/api/stats/daily", async (_req, res) => {
+  app.get("/api/stats/daily", requireAdmin, async (_req, res) => {
     try {
       const stats = gameLogic.getDailyStatsForDate();
       res.json(stats);
@@ -390,7 +422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all daily statistics
-  app.get("/api/stats/all", async (_req, res) => {
+  app.get("/api/stats/all", requireAdmin, async (_req, res) => {
     try {
       const stats = gameLogic.getAllDailyStats();
       res.json(stats);
@@ -400,7 +432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get house edge configuration
-  app.get("/api/config", async (_req, res) => {
+  app.get("/api/config", requireAdmin, async (_req, res) => {
     try {
       const config = gameLogic.getConfig();
       res.json(config);
@@ -410,9 +442,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update house edge configuration (admin only in production)
-  app.put("/api/config", async (req, res) => {
+  app.put("/api/config", requireAdmin, async (req, res) => {
     try {
-      gameLogic.updateConfig(req.body);
+      if (process.env.NODE_ENV === "production") {
+        return res.status(405).json({ error: "Runtime configuration is immutable in production" });
+      }
+      const update = z.object({
+        houseEdgePercentage: z.number().min(0).max(50).optional(),
+        maxDailyPayoutRatio: z.number().min(0).max(1).optional(),
+        maxSingleWinMultiplier: z.number().positive().max(1_000_000).optional(),
+      }).strict().parse(req.body);
+      gameLogic.updateConfig(update);
       const config = gameLogic.getConfig();
       res.json(config);
     } catch (error) {
@@ -543,7 +583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create game code
-  app.post("/api/codes", async (req, res) => {
+  app.post("/api/codes", requireAdmin, async (req, res) => {
     try {
       const validatedCode = insertGameCodeSchema.parse(req.body);
       const gameCode = await storage.createGameCode(validatedCode);
@@ -557,7 +597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create aviator session
-  app.post("/api/aviator/session", async (req, res) => {
+  app.post("/api/aviator/session", requireAdmin, async (req, res) => {
     try {
       const validatedSession = insertAviatorSessionSchema.parse(req.body);
       const session = await storage.createAviatorSession(validatedSession);
@@ -586,11 +626,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cash out from aviator
   app.post("/api/aviator/cashout/:sessionId", async (req, res) => {
     try {
-      const { multiplier } = req.body;
-      if (typeof multiplier !== 'number' || multiplier <= 0) {
-        return res.status(400).json({ error: "Invalid multiplier" });
-      }
-
       const session = await storage.getAviatorSession(req.params.sessionId);
       if (!session) {
         return res.status(404).json({ error: "Session not found" });
@@ -598,6 +633,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (session.status !== 'active') {
         return res.status(400).json({ error: "Session is not active" });
+      }
+
+      const multiplier = session.currentMultiplier;
+      if (multiplier >= session.crashMultiplier) {
+        return res.status(409).json({ error: "This session has already crashed" });
       }
 
       const bet = await storage.getBet(session.betId);
@@ -614,7 +654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         completedAt: new Date(),
       });
 
-      await storage.updateBetOutcome(session.betId, 'won', cashedOutAmount, '');
+      await storage.updateBetOutcome(session.betId, 'won', cashedOutAmount, null);
 
       res.json({
         session: updatedSession,
@@ -626,7 +666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Complete aviator session (crashed)
-  app.post("/api/aviator/crash/:sessionId", async (req, res) => {
+  app.post("/api/aviator/crash/:sessionId", requireAdmin, async (req, res) => {
     try {
       const session = await storage.getAviatorSession(req.params.sessionId);
       if (!session) {
@@ -638,7 +678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         completedAt: new Date(),
       });
 
-      await storage.updateBetOutcome(session.betId, 'lost', 0, '');
+      await storage.updateBetOutcome(session.betId, 'lost', 0, null);
 
       res.json({ session: updatedSession });
     } catch (error) {
@@ -675,6 +715,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create forum post
   app.post("/api/forum/posts", async (req, res) => {
     try {
+      if (process.env.COMMUNITY_POSTING_ENABLED !== "true" && process.env.NODE_ENV === "production") {
+        return res.status(503).json({ error: "Community posting is temporarily disabled" });
+      }
       const validatedPost = insertForumPostSchema.parse(req.body);
       const post = await storage.createForumPost(validatedPost);
       res.status(201).json(post);
@@ -699,6 +742,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create comment
   app.post("/api/forum/comments", async (req, res) => {
     try {
+      if (process.env.COMMUNITY_POSTING_ENABLED !== "true" && process.env.NODE_ENV === "production") {
+        return res.status(503).json({ error: "Community posting is temporarily disabled" });
+      }
       const validatedComment = insertForumCommentSchema.parse(req.body);
       const comment = await storage.createForumComment(validatedComment);
       res.status(201).json(comment);
@@ -713,9 +759,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create contact inquiry
   app.post("/api/contact", async (req, res) => {
     try {
+      if (publicPreviewMode) {
+        return res.status(503).json({ error: "Contact submissions are unavailable in public preview mode" });
+      }
       const validatedInquiry = insertContactInquirySchema.parse(req.body);
       const inquiry = await storage.createContactInquiry(validatedInquiry);
-      res.status(201).json(inquiry);
+      res.status(202).json({ accepted: true, reference: inquiry.id });
     } catch (error) {
       if (error instanceof Error && 'issues' in error) {
         return res.status(400).json({ error: "Invalid contact data", details: error });
@@ -725,7 +774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all contact inquiries
-  app.get("/api/contact", async (_req, res) => {
+  app.get("/api/contact", requireAdmin, async (_req, res) => {
     try {
       const inquiries = await storage.getAllContactInquiries();
       res.json(inquiries);
@@ -734,7 +783,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-
-  return httpServer;
 }
