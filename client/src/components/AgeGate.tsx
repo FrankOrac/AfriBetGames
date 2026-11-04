@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -7,9 +8,18 @@ import { Label } from "@/components/ui/label";
 
 const STORAGE_KEY = "afribet.ageConfirmed.v1";
 
+type Capabilities = {
+  bettingEnabled: boolean;
+};
+
 export default function AgeGate() {
+  const { data } = useQuery<Capabilities>({ queryKey: ["/api/capabilities"] });
   const [open, setOpen] = useState(() => localStorage.getItem(STORAGE_KEY) !== "true");
   const [confirmed, setConfirmed] = useState(false);
+
+  // The public preview is read-only, so it must remain freely explorable.
+  // Show this acknowledgement only when the server explicitly enables bets.
+  if (data?.bettingEnabled !== true) return null;
 
   function continueToSite() {
     if (!confirmed) return;
