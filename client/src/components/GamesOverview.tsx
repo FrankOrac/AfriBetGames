@@ -191,23 +191,13 @@ export default function GamesOverview() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {games.map((game, index) => (
-            <motion.div
-              key={game.title}
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ 
-                duration: 0.5,
-                delay: index * 0.1,
-                ease: "easeOut"
-              }}
-            >
+          {games.map((game) => (
+            <div key={game.title}>
               <GameCard
                 {...game}
                 href={game.route}
               />
-            </motion.div>
+            </div>
           ))}
         </div>
 
