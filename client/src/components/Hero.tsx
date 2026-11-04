@@ -1,214 +1,82 @@
 import { Button } from '@/components/ui/button';
-import { Trophy, Zap, Clock } from 'lucide-react';
-import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
-import { useRef } from 'react';
+import { CheckCircle2, Clock3, ShieldCheck } from 'lucide-react';
 import { Link } from 'wouter';
-import heroImage from '@assets/generated_images/hero-celebration.webp';
+
+const schedule = [
+  { name: 'Noon Game', timing: 'Daily · 12:00 PM', status: 'Daily draw' },
+  { name: 'Night Game', timing: 'Daily · 12:00 AM', status: 'Daily draw' },
+  { name: 'Virtual Betting', timing: 'Weekly rounds', status: '35-week cycle' },
+];
 
 export default function Hero() {
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start start", "end start"]
-  });
-
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
-  const opacity = useTransform(scrollYProgress, [0, 0.5, 1], [1, 0.8, 0]);
-  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.1]);
-
-  const springConfig = { stiffness: 100, damping: 30, restDelta: 0.001 };
-  const ySpring = useSpring(y, springConfig);
-
   return (
-    <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden" style={{ position: 'relative' }}>
-      <motion.div 
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ 
-          backgroundImage: `url(${heroImage})`,
-          y: ySpring,
-          scale
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-green-900/80 via-black/70 to-purple-900/80"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-      </motion.div>
-      
-      {/* Animated floating orbs with 3D effect */}
-      <motion.div 
-        className="absolute top-20 -left-20 w-96 h-96 bg-green-500/20 rounded-full blur-3xl"
-        animate={{
-          y: [0, -30, 0],
-          x: [0, 20, 0],
-          scale: [1, 1.1, 1],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-      <motion.div 
-        className="absolute bottom-20 -right-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"
-        animate={{
-          y: [0, 30, 0],
-          x: [0, -20, 0],
-          scale: [1, 1.2, 1],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: "easeInOut",
-          delay: 1
-        }}
-      />
+    <section className="bg-[#071a12] text-white">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:px-8 lg:py-20">
+        <div className="max-w-2xl">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            Demo environment
+          </div>
 
-      <motion.div 
-        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center"
-        style={{ opacity }}
-      >
-        <div className="space-y-8">
-          <motion.h1 
-            className="font-display font-bold text-5xl md:text-6xl lg:text-7xl leading-tight"
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          >
-            <motion.span 
-              className="bg-gradient-to-r from-white via-green-100 to-white bg-clip-text text-transparent inline-block"
-              animate={{
-                backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-              }}
-              transition={{
-                duration: 5,
-                repeat: Infinity,
-                ease: "linear"
-              }}
-              style={{ backgroundSize: "200% 200%" }}
-            >
-              Win Big.
-            </motion.span>{' '}
-            <motion.span 
-              className="bg-gradient-to-r from-green-100 via-white to-green-100 bg-clip-text text-transparent inline-block"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-            >
-              Play Smart.
-            </motion.span>
-            <br />
-            <motion.span 
-              className="bg-gradient-to-r from-green-400 via-emerald-300 to-yellow-400 bg-clip-text text-transparent font-extrabold inline-block"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ 
-                opacity: 1, 
-                scale: 1,
-                backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-              }}
-              transition={{
-                opacity: { duration: 0.8, delay: 0.4 },
-                scale: { duration: 0.8, delay: 0.4 },
-                backgroundPosition: {
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "linear"
-                }
-              }}
-              style={{ backgroundSize: "200% 200%" }}
-            >
-              Track Every Ticket.
-            </motion.span>
-          </motion.h1>
-          
-          <motion.p 
-            className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-          >
-            Explore number games, keep a private ticket reference, and check every published draw in one place.
-          </motion.p>
+          <h1 className="text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
+            Number games with clear rules and published results.
+          </h1>
+          <p className="mt-5 max-w-xl text-base leading-7 text-white/70 sm:text-lg">
+            Review each game, create a ticket reference and check every published draw from one account-ready platform.
+          </p>
 
-          <motion.div 
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-          >
-            <motion.div
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <Button asChild size="lg" className="h-11 px-6 font-semibold shadow-none" data-testid="button-hero-start-playing">
+              <a href="#games">View games</a>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="h-11 border-white/25 bg-transparent px-6 font-semibold text-white shadow-none hover:bg-white/10 hover:text-white"
+              data-testid="button-hero-view-results"
             >
-              <Button 
-                asChild
-                size="lg" 
-                className="text-lg px-8 py-6 min-h-14 shadow-2xl shadow-green-500/50"
-                data-testid="button-hero-start-playing"
-              >
-                <a href="#games">
-                  <Zap className="w-5 h-5 mr-2" />
-                  Start Playing
-                </a>
-              </Button>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button 
-                asChild
-                size="lg" 
-                variant="outline" 
-                className="text-lg px-8 py-6 min-h-14 backdrop-blur-md bg-white/20 text-white border-white/30 hover:bg-white/30 shadow-xl"
-                data-testid="button-hero-view-results"
-              >
-                <Link href="/results">View Results</Link>
-              </Button>
-            </motion.div>
-          </motion.div>
+              <Link href="/results">Published results</Link>
+            </Button>
+          </div>
 
-          <motion.div 
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-12 max-w-4xl mx-auto"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1 }}
-          >
-            {[
-              { icon: Trophy, text: "200+ Branches Planned", delay: 0 },
-              { icon: Zap, text: "Daily Payouts", delay: 0.1 },
-              { icon: Clock, text: "Published Results", delay: 0.2 }
-            ].map((item, index) => (
-              <motion.div
-                key={index}
-                className="flex flex-col items-center gap-2 text-white"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 1.2 + item.delay }}
-                whileHover={{ 
-                  scale: 1.1, 
-                  y: -10,
-                  transition: { duration: 0.3 }
-                }}
-              >
-                <motion.div
-                  animate={{ 
-                    rotateY: [0, 360],
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: "linear",
-                    delay: item.delay
-                  }}
-                  style={{ transformStyle: "preserve-3d" }}
-                >
-                  <item.icon className="w-8 h-8 text-primary drop-shadow-glow" />
-                </motion.div>
-                <span className="font-semibold text-lg">{item.text}</span>
-              </motion.div>
+          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 border-t border-white/10 pt-6 text-sm text-white/70">
+            {['Transparent game rules', 'Private ticket reference', 'Published draw history'].map((item) => (
+              <span key={item} className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+                {item}
+              </span>
             ))}
-          </motion.div>
+          </div>
         </div>
-      </motion.div>
+
+        <div className="hidden overflow-hidden rounded-lg border border-white/10 bg-white/[0.04] shadow-2xl shadow-black/20 lg:block">
+          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-300">Game schedule</p>
+              <h2 className="mt-1 text-lg font-semibold">Available draws</h2>
+            </div>
+            <Clock3 className="h-5 w-5 text-white/50" aria-hidden="true" />
+          </div>
+
+          <div className="divide-y divide-white/10">
+            {schedule.map((game) => (
+              <div key={game.name} className="grid grid-cols-[1fr_auto] gap-4 px-5 py-4">
+                <div>
+                  <p className="font-semibold text-white">{game.name}</p>
+                  <p className="mt-1 text-sm text-white/55">{game.timing}</p>
+                </div>
+                <span className="self-center rounded-md bg-white/10 px-2 py-1 text-xs font-medium text-white/75">{game.status}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-start gap-3 bg-black/15 px-5 py-4 text-sm text-white/65">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
+            <p>Real-money payments and betting remain disabled while the platform is in testing.</p>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
