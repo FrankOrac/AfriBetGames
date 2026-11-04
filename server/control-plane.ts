@@ -81,6 +81,7 @@ export type InfrastructureReadiness = {
 
 export type OperationalCapabilities = {
   bettingEnabled: boolean;
+  demoModeEnabled: boolean;
   communityPostingEnabled: boolean;
   contactSubmissionsEnabled: boolean;
   realMoneyPaymentsEnabled: boolean;
@@ -94,6 +95,7 @@ export function initialPlatformSettings(): InsertPlatformSettings {
     communityPostingEnabled: process.env.COMMUNITY_POSTING_ENABLED === "true" && process.env.NODE_ENV !== "production",
     contactSubmissionsEnabled: process.env.PUBLIC_PREVIEW_MODE !== "true" && process.env.NODE_ENV !== "production",
     maintenanceMode: false,
+    demoModeEnabled: false,
     houseEdgePercentage: Number(process.env.HOUSE_EDGE_PERCENTAGE ?? 15),
     maxDailyPayoutRatio: Number(process.env.MAX_DAILY_PAYOUT_RATIO ?? 0.75),
     maxSingleWinMultiplier: Number(process.env.MAX_SINGLE_WIN_MULTIPLIER ?? 1000),
@@ -148,6 +150,7 @@ export function operationalCapabilities(
 
   return {
     bettingEnabled: !maintenanceMode && allLaunchGatesComplete && settings.bettingEnabled,
+    demoModeEnabled: !maintenanceMode && settings.demoModeEnabled,
     communityPostingEnabled: !maintenanceMode && !infrastructure.publicPreviewMode && communityReady && settings.communityPostingEnabled,
     contactSubmissionsEnabled: !maintenanceMode && !infrastructure.publicPreviewMode && settings.contactSubmissionsEnabled,
     // This codebase does not yet contain a payment-provider or audited-ledger implementation.

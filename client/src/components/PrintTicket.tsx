@@ -307,7 +307,7 @@ export default function PrintTicket({ betId, autoOpen = false }: PrintTicketProp
             <div className="header">
               <div className="brand">AFRIBET GAMES</div>
               <div className="subtitle">
-                {isPending ? 'BET SLIP' : 'RESULTS TICKET'}
+                {ticket.isDemo ? 'DEMO — NO CASH VALUE' : (isPending ? 'BET SLIP' : 'RESULTS TICKET')}
               </div>
               <div className="subtitle" style={{ fontSize: '8px', marginTop: '2px' }}>
                 {ticket.gameName.toUpperCase()}

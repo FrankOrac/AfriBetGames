@@ -14,6 +14,8 @@ import {
   platformSettings,
   complianceGates,
   operatorAuditLogs,
+  demoWallets,
+  demoLedger,
   type AviatorSession,
   type Bet,
   type ContactInquiry,
@@ -38,6 +40,8 @@ import {
   type InsertComplianceGate,
   type OperatorAuditLog,
   type InsertOperatorAuditLog,
+  type DemoWallet,
+  type DemoLedgerEntry,
 } from "@shared/schema";
 import { GAME_CATALOG } from "./game-catalog";
 import { initialComplianceGates, initialPlatformSettings, PLATFORM_SETTINGS_ID } from "./control-plane";
@@ -126,6 +130,8 @@ export class DatabaseStorage implements IStorage {
       stakeAmount: bet.stakeAmount,
       potentialWinning: bet.potentialWinning ?? null,
       status: "pending",
+      isDemo: bet.isDemo ?? false,
+      demoSessionId: bet.demoSessionId ?? null,
     }).returning())[0];
   }
 
@@ -155,11 +161,11 @@ export class DatabaseStorage implements IStorage {
       .limit(1))[0];
   }
 
-  async getFirstResultAfter(gameId: string, after: Date): Promise<Result | undefined> {
+  async getFirstResultAfter(gameId: string, after: Date, isDemo = false): Promise<Result | undefined> {
     return (await this.db
       .select()
       .from(results)
-      .where(and(eq(results.gameId, gameId), gte(results.drawDate, after)))
+      .where(and(eq(results.gameId, gameId), eq(results.isDemo, isDemo), gte(results.drawDate, after)))
       .orderBy(asc(results.drawDate))
       .limit(1))[0];
   }
@@ -170,6 +176,7 @@ export class DatabaseStorage implements IStorage {
       winningNumbers: JSON.stringify(result.winningNumbers),
       bonusNumber: result.bonusNumber ?? null,
       odds: JSON.stringify(result.odds),
+      isDemo: result.isDemo ?? false,
     }).returning())[0];
   }
 
@@ -382,5 +389,33 @@ export class DatabaseStorage implements IStorage {
   async createOperatorAuditLog(log: InsertOperatorAuditLog): Promise<OperatorAuditLog> {
     await this.ensureControlPlane();
     return (await this.db.insert(operatorAuditLogs).values(log).returning())[0];
+  }
+
+  async getDemoWallet(sessionId: string): Promise<DemoWallet> {
+    await this.db.insert(demoWallets).values({ sessionId, balance: 0 }).onConflictDoNothing({ target: demoWallets.sessionId });
+    return (await this.db.select().from(demoWallets).where(eq(demoWallets.sessionId, sessionId)).limit(1))[0];
+  }
+
+  async adjustDemoWallet(sessionId: string, amount: number, type: string, reference?: string): Promise<DemoWallet | undefined> {
+    const wallet = await this.getDemoWallet(sessionId);
+    const balance = Math.round((wallet.balance + amount) * 100) / 100;
+    if (balance < 0 || balance > 1_000_000) return undefined;
+    const updated = (await this.db
+      .update(demoWallets)
+      .set({ balance, updatedAt: new Date() })
+      .where(and(eq(demoWallets.sessionId, sessionId), eq(demoWallets.balance, wallet.balance)))
+      .returning())[0];
+    if (!updated) return undefined;
+    await this.db.insert(demoLedger).values({
+      sessionId, type, amount, balanceAfter: balance, reference: reference ?? null,
+    });
+    return updated;
+  }
+
+  async getDemoLedger(sessionId: string): Promise<DemoLedgerEntry[]> {
+    return this.db.select().from(demoLedger)
+      .where(eq(demoLedger.sessionId, sessionId))
+      .orderBy(desc(demoLedger.createdAt))
+      .limit(50);
   }
 }

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, TrendingUp, Wallet } from "lucide-react";
 import { Link } from "wouter";
 import Footer from "@/components/Footer";
@@ -20,6 +20,7 @@ type TicketOutcome = {
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const ticketIds = getTicketIds();
   const outcomesQuery = useQuery<TicketOutcome[]>({
     queryKey: ["local-ticket-outcomes", ...ticketIds],
@@ -54,6 +55,7 @@ export default function Dashboard() {
       description: data.message,
     });
     await outcomesQuery.refetch();
+    await queryClient.invalidateQueries({ queryKey: ["/api/demo/wallet"] });
   }
 
   return (
@@ -97,6 +99,7 @@ export default function Dashboard() {
                               {bet.status === "won" && <CheckCircle2 className="w-3 h-3 mr-1" />}
                               {bet.status}
                             </Badge>
+                            {bet.isDemo && <Badge variant="outline">Demo · no cash value</Badge>}
                           </div>
                           <div className="flex flex-wrap gap-2 mb-2">
                             {selectedNumbers.map((number) => <Badge key={number} variant="outline">{number}</Badge>)}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import WinningsCalculator from '@/components/WinningsCalculator';
 import PrintTicket from '@/components/PrintTicket';
 import { useToast } from '@/hooks/use-toast';
 import { saveTicketId } from '@/lib/tickets';
+import { demoHeaders } from '@/lib/demo';
 import type { Game, Bet, Result } from '@shared/schema';
 
 const VIRTUAL_GAME_TYPES = ['virtual', 'aviator', 'lucky_numbers', 'super_virtual'];
@@ -22,6 +23,7 @@ export default function PlayGame() {
   const [, params] = useRoute('/play/:gameType');
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [bonusNumber, setBonusNumber] = useState<number | undefined>();
@@ -58,12 +60,13 @@ export default function PlayGame() {
 
       const response = await fetch('/api/bets', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...demoHeaders() },
         body: JSON.stringify(betData),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to place bet');
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(typeof payload.error === 'string' ? payload.error : 'Failed to place bet');
       }
 
       return await response.json() as Bet;
@@ -71,15 +74,18 @@ export default function PlayGame() {
     onSuccess: (data) => {
       saveTicketId(data.id);
       setCurrentBetId(data.id);
+      void queryClient.invalidateQueries({ queryKey: ['/api/demo/wallet'] });
       toast({
         title: 'Bet Placed Successfully!',
-        description: `Ticket saved. Results will be settled after the official draw.`,
+        description: data.isDemo
+          ? 'Demo ticket saved. Generate a demo draw from the admin dashboard, then check it on My Tickets.'
+          : 'Ticket saved. Results will be settled after the official draw.',
       });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: 'Failed to Place Bet',
-        description: 'Please try again or contact support.',
+        description: error instanceof Error ? error.message : 'Please try again or contact support.',
         variant: 'destructive',
       });
     },
@@ -268,7 +274,7 @@ export default function PlayGame() {
                     <h1 className="font-display font-bold text-3xl">{game.name}</h1>
                     <p className="text-muted-foreground">{game.description}</p>
                     <p className="text-sm text-primary font-medium mt-1">
-                      Results are settled only from the published official draw.
+                      Results are settled only from a published draw that matches the ticket mode.
                     </p>
                   </div>
                 </div>

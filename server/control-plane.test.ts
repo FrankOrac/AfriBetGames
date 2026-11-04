@@ -63,3 +63,36 @@ test("maintenance mode is an immediate kill switch", () => {
   assert.equal(capabilities.contactSubmissionsEnabled, false);
   assert.equal(capabilities.maintenanceMode, true);
 });
+
+test("demo sandbox can run while real-money launch gates remain incomplete", () => {
+  const settings = {
+    ...enabledSettings(),
+    bettingEnabled: false,
+    demoModeEnabled: true,
+  };
+  const capabilities = operationalCapabilities(settings, initialComplianceGates() as ComplianceGate[], {
+    persistentDatabase: true,
+    operatorAuthentication: true,
+    publicPreviewMode: false,
+  });
+
+  assert.equal(capabilities.demoModeEnabled, true);
+  assert.equal(capabilities.bettingEnabled, false);
+  assert.equal(capabilities.realMoneyPaymentsEnabled, false);
+});
+
+test("maintenance mode also stops the demo sandbox", () => {
+  const settings = {
+    ...enabledSettings(),
+    bettingEnabled: false,
+    demoModeEnabled: true,
+    maintenanceMode: true,
+  };
+  const capabilities = operationalCapabilities(settings, initialComplianceGates() as ComplianceGate[], {
+    persistentDatabase: true,
+    operatorAuthentication: true,
+    publicPreviewMode: false,
+  });
+
+  assert.equal(capabilities.demoModeEnabled, false);
+});

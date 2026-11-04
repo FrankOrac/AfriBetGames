@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { demoHeaders } from "./demo";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -14,7 +15,7 @@ export async function apiRequest(
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: { ...(data ? { "Content-Type": "application/json" } : {}), ...demoHeaders() },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });

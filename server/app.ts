@@ -32,7 +32,7 @@ function corsMiddleware(): RequestHandler {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Admin-Key,X-Admin-Actor,X-Request-Id");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Admin-Key,X-Admin-Actor,X-Demo-Session-Id,X-Request-Id");
     res.setHeader("Access-Control-Allow-Credentials", "true");
 
     if (req.method === "OPTIONS") {

@@ -33,6 +33,8 @@ export const bets = pgTable("bets", {
   status: text("status").notNull().default('pending'),
   payout: numeric("payout", { precision: 14, scale: 2, mode: "number" }),
   resultId: varchar("result_id"),
+  isDemo: boolean("is_demo").notNull().default(false),
+  demoSessionId: varchar("demo_session_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   index("bets_game_id_idx").on(table.gameId),
@@ -47,7 +49,11 @@ export const insertBetSchema = z.object({
 }).strict();
 
 export type InsertBet = z.infer<typeof insertBetSchema>;
-export type NewBet = InsertBet & { potentialWinning?: number };
+export type NewBet = InsertBet & {
+  potentialWinning?: number;
+  isDemo?: boolean;
+  demoSessionId?: string | null;
+};
 export type Bet = typeof bets.$inferSelect;
 
 export const results = pgTable("results", {
@@ -57,6 +63,7 @@ export const results = pgTable("results", {
   winningNumbers: text("winning_numbers").notNull(),
   bonusNumber: integer("bonus_number"),
   odds: text("odds").notNull(),
+  isDemo: boolean("is_demo").notNull().default(false),
 }, (table) => [
   index("results_game_draw_idx").on(table.gameId, table.drawDate),
 ]);
@@ -67,6 +74,7 @@ export const insertResultSchema = z.object({
   winningNumbers: z.array(z.number().int()).min(1).max(10),
   bonusNumber: z.number().int().optional(),
   odds: z.array(z.number().finite().positive()).min(1).max(10),
+  isDemo: z.boolean().optional(),
 }).strict();
 
 export type InsertResult = z.infer<typeof insertResultSchema>;
@@ -233,6 +241,7 @@ export const platformSettings = pgTable("platform_settings", {
   communityPostingEnabled: boolean("community_posting_enabled").notNull().default(false),
   contactSubmissionsEnabled: boolean("contact_submissions_enabled").notNull().default(false),
   maintenanceMode: boolean("maintenance_mode").notNull().default(false),
+  demoModeEnabled: boolean("demo_mode_enabled").notNull().default(false),
   houseEdgePercentage: numeric("house_edge_percentage", { precision: 5, scale: 2, mode: "number" }).notNull().default(15),
   maxDailyPayoutRatio: numeric("max_daily_payout_ratio", { precision: 5, scale: 4, mode: "number" }).notNull().default(0.75),
   maxSingleWinMultiplier: numeric("max_single_win_multiplier", { precision: 12, scale: 2, mode: "number" }).notNull().default(1000),
@@ -277,3 +286,26 @@ export const insertOperatorAuditLogSchema = createInsertSchema(operatorAuditLogs
 });
 export type InsertOperatorAuditLog = z.infer<typeof insertOperatorAuditLogSchema>;
 export type OperatorAuditLog = typeof operatorAuditLogs.$inferSelect;
+
+export const demoWallets = pgTable("demo_wallets", {
+  sessionId: varchar("session_id").primaryKey(),
+  balance: numeric("balance", { precision: 14, scale: 2, mode: "number" }).notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type DemoWallet = typeof demoWallets.$inferSelect;
+
+export const demoLedger = pgTable("demo_ledger", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => demoWallets.sessionId, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  amount: numeric("amount", { precision: 14, scale: 2, mode: "number" }).notNull(),
+  balanceAfter: numeric("balance_after", { precision: 14, scale: 2, mode: "number" }).notNull(),
+  reference: text("reference"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("demo_ledger_session_created_idx").on(table.sessionId, table.createdAt),
+]);
+
+export type DemoLedgerEntry = typeof demoLedger.$inferSelect;

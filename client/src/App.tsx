@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 import { CountryProvider } from "@/providers/CountryProvider";
 import AgeGate from "@/components/AgeGate";
 import PlatformNotice from "@/components/PlatformNotice";
+import DemoWalletBar from "@/components/DemoWalletBar";
 
 const Home = lazy(() => import("@/pages/Home"));
 const PlayGame = lazy(() => import("@/pages/PlayGame"));
@@ -48,6 +49,7 @@ function App() {
             <Toaster />
             <AgeGate />
             <PlatformNotice />
+            <DemoWalletBar />
             <Suspense fallback={<div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>}>
               <Router />
             </Suspense>

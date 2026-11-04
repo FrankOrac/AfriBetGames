@@ -27,6 +27,7 @@ import type { Bet, ComplianceGate, ContactInquiry, Game, OperatorAuditLog, Platf
 
 type Capabilities = {
   bettingEnabled: boolean;
+  demoModeEnabled: boolean;
   communityPostingEnabled: boolean;
   contactSubmissionsEnabled: boolean;
   realMoneyPaymentsEnabled: boolean;
@@ -50,6 +51,9 @@ type ControlPlane = {
     totalPaid: number;
     publishedResults: number;
     openInquiries: number;
+    demoBets: number;
+    demoStaked: number;
+    demoPaid: number;
   };
   games: Game[];
   recentBets: Bet[];
@@ -189,6 +193,7 @@ export default function AdminDashboard() {
             <Card className="p-6 bg-slate-900 border-slate-800 text-slate-100 space-y-5">
               <SectionTitle icon={<Settings2 />} title="Runtime feature controls" description="Stored in the production database and enforced by every write endpoint." />
               <FeatureSwitch label="Maintenance mode" description="Immediately disables betting, posting and contact submissions." checked={control.settings.maintenanceMode} active={control.capabilities.maintenanceMode} onChange={(value) => updateFeatures({ maintenanceMode: value })} />
+              <FeatureSwitch label="Demo sandbox" description="Enables test-only wallets, demo bets and demo draws without completing real-money compliance gates." checked={control.settings.demoModeEnabled} active={control.capabilities.demoModeEnabled} onChange={(value) => updateFeatures({ demoModeEnabled: value })} />
               <FeatureSwitch label="Bet placement" description="Can only become active when every launch gate and infrastructure prerequisite is complete." checked={control.settings.bettingEnabled} active={control.capabilities.bettingEnabled} onChange={(value) => updateFeatures({ bettingEnabled: value })} />
               <FeatureSwitch label="Community posting" description="Requires authenticated player identity and moderation controls." checked={control.settings.communityPostingEnabled} active={control.capabilities.communityPostingEnabled} onChange={(value) => updateFeatures({ communityPostingEnabled: value })} />
               <FeatureSwitch label="Contact submissions" description="Enables investor and general contact forms outside public preview mode." checked={control.settings.contactSubmissionsEnabled} active={control.capabilities.contactSubmissionsEnabled} onChange={(value) => updateFeatures({ contactSubmissionsEnabled: value })} />
@@ -284,7 +289,14 @@ function Operations({ control, adminFetch, onSaved }: { control: ControlPlane; a
     try { await adminFetch("/api/codes", { method: "POST", body: JSON.stringify({ code, gameId: gameId || null, usesRemaining: 100 }) }); toast({ title: "Promotion code created" }); setCode(""); }
     catch (caught) { toast({ title: "Code rejected", description: caught instanceof Error ? caught.message : "Request failed", variant: "destructive" }); }
   };
-  return <div className="grid lg:grid-cols-2 gap-5"><Card className="p-6 bg-slate-900 border-slate-800 text-slate-100"><SectionTitle icon={<TicketCheck />} title="Publish verified result" description="Manual publication is validated against the selected game rules." /><div className="space-y-3 mt-5"><Select value={gameId} onValueChange={setGameId}><SelectTrigger className="bg-slate-950 border-slate-700"><SelectValue placeholder="Select game" /></SelectTrigger><SelectContent>{control.games.map((game) => <SelectItem key={game.id} value={game.id}>{game.name}</SelectItem>)}</SelectContent></Select><Input value={numbers} onChange={(event) => setNumbers(event.target.value)} placeholder="Winning numbers, comma separated" className="bg-slate-950 border-slate-700" /><Input value={odds} onChange={(event) => setOdds(event.target.value)} placeholder="Matching odds, comma separated" className="bg-slate-950 border-slate-700" /><Input value={bonus} onChange={(event) => setBonus(event.target.value)} placeholder="Bonus number (optional)" className="bg-slate-950 border-slate-700" /><Button onClick={publish}>Publish result</Button></div></Card><Card className="p-6 bg-slate-900 border-slate-800 text-slate-100"><SectionTitle icon={<KeyRound />} title="Promotion codes" description="Create an auditable, limited-use game code." /><div className="space-y-3 mt-5"><Input value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="PROMO_CODE" className="bg-slate-950 border-slate-700" /><Button onClick={createCode} disabled={!code}>Create 100-use code</Button></div><div className="border-t border-slate-800 mt-6 pt-5"><h3 className="font-semibold mb-3">Recent inquiries</h3>{control.recentInquiries.length === 0 ? <p className="text-sm text-slate-400">No inquiries.</p> : control.recentInquiries.slice(0, 5).map((item) => <div key={item.id} className="py-2 border-b border-slate-800"><p className="font-medium">{item.subject}</p><p className="text-xs text-slate-400">{item.name} · {item.email}</p></div>)}</div></Card></div>;
+  const generateDemoDraw = async () => {
+    try {
+      await adminFetch(`/api/results/generate/${gameId}`, { method: "POST" });
+      toast({ title: "Demo draw generated", description: "Only demo tickets can settle against this draw." });
+      await onSaved();
+    } catch (caught) { toast({ title: "Demo draw failed", description: caught instanceof Error ? caught.message : "Request failed", variant: "destructive" }); }
+  };
+  return <div className="grid lg:grid-cols-2 gap-5"><Card className="p-6 bg-slate-900 border-slate-800 text-slate-100"><SectionTitle icon={<TicketCheck />} title="Draw operations" description="Official publication is validated; generated sandbox draws settle demo tickets only." /><div className="space-y-3 mt-5"><Select value={gameId} onValueChange={setGameId}><SelectTrigger className="bg-slate-950 border-slate-700"><SelectValue placeholder="Select game" /></SelectTrigger><SelectContent>{control.games.map((game) => <SelectItem key={game.id} value={game.id}>{game.name}</SelectItem>)}</SelectContent></Select><Button variant="outline" className="w-full" onClick={generateDemoDraw} disabled={!control.capabilities.demoModeEnabled}>Generate demo draw</Button><Input value={numbers} onChange={(event) => setNumbers(event.target.value)} placeholder="Official winning numbers, comma separated" className="bg-slate-950 border-slate-700" /><Input value={odds} onChange={(event) => setOdds(event.target.value)} placeholder="Matching odds, comma separated" className="bg-slate-950 border-slate-700" /><Input value={bonus} onChange={(event) => setBonus(event.target.value)} placeholder="Bonus number (optional)" className="bg-slate-950 border-slate-700" /><Button onClick={publish}>Publish official result</Button></div></Card><Card className="p-6 bg-slate-900 border-slate-800 text-slate-100"><SectionTitle icon={<KeyRound />} title="Promotion codes" description="Create an auditable, limited-use game code." /><div className="space-y-3 mt-5"><Input value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="PROMO_CODE" className="bg-slate-950 border-slate-700" /><Button onClick={createCode} disabled={!code}>Create 100-use code</Button></div><div className="border-t border-slate-800 mt-6 pt-5"><h3 className="font-semibold mb-3">Demo activity</h3><p className="text-sm text-slate-300">{control.metrics.demoBets} bets · Demo ₦{control.metrics.demoStaked.toLocaleString()} staked · Demo ₦{control.metrics.demoPaid.toLocaleString()} paid</p></div><div className="border-t border-slate-800 mt-6 pt-5"><h3 className="font-semibold mb-3">Recent inquiries</h3>{control.recentInquiries.length === 0 ? <p className="text-sm text-slate-400">No inquiries.</p> : control.recentInquiries.slice(0, 5).map((item) => <div key={item.id} className="py-2 border-b border-slate-800"><p className="font-medium">{item.subject}</p><p className="text-xs text-slate-400">{item.name} · {item.email}</p></div>)}</div></Card></div>;
 }
 
 function AuditLog({ entries }: { entries: OperatorAuditLog[] }) {

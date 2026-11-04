@@ -6,12 +6,13 @@ type Capabilities = {
   bettingEnabled: boolean;
   communityPostingEnabled: boolean;
   realMoneyPaymentsEnabled: boolean;
+  demoModeEnabled: boolean;
 };
 
 export default function PlatformNotice() {
   const [location] = useLocation();
   const { data } = useQuery<Capabilities>({ queryKey: ["/api/capabilities"] });
-  if (location === "/admin" || !data || data.bettingEnabled) return null;
+  if (location === "/admin" || !data || data.bettingEnabled || data.demoModeEnabled) return null;
 
   return (
     <div role="status" className="bg-amber-100 text-amber-950 border-b border-amber-300 px-4 py-2 text-sm">

@@ -23,6 +23,8 @@ import {
   type InsertComplianceGate,
   type OperatorAuditLog,
   type InsertOperatorAuditLog,
+  type DemoWallet,
+  type DemoLedgerEntry,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { GAME_CATALOG } from "./game-catalog";
@@ -44,7 +46,7 @@ export interface IStorage {
   getAllResults(): Promise<Result[]>;
   getResultsByGame(gameId: string): Promise<Result[]>;
   getLatestResult(gameId: string): Promise<Result | undefined>;
-  getFirstResultAfter(gameId: string, after: Date): Promise<Result | undefined>;
+  getFirstResultAfter(gameId: string, after: Date, isDemo?: boolean): Promise<Result | undefined>;
   createResult(result: InsertResult): Promise<Result>;
   
   getWinning(id: string): Promise<Winning | undefined>;
@@ -82,6 +84,9 @@ export interface IStorage {
   updateComplianceGate(key: string, gate: Partial<InsertComplianceGate>): Promise<ComplianceGate | undefined>;
   getOperatorAuditLogs(): Promise<OperatorAuditLog[]>;
   createOperatorAuditLog(log: InsertOperatorAuditLog): Promise<OperatorAuditLog>;
+  getDemoWallet(sessionId: string): Promise<DemoWallet>;
+  adjustDemoWallet(sessionId: string, amount: number, type: string, reference?: string): Promise<DemoWallet | undefined>;
+  getDemoLedger(sessionId: string): Promise<DemoLedgerEntry[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -97,6 +102,8 @@ export class MemStorage implements IStorage {
   private platformSettings: PlatformSettings;
   private complianceGates: Map<string, ComplianceGate>;
   private operatorAuditLogs: OperatorAuditLog[];
+  private demoWallets: Map<string, DemoWallet>;
+  private demoLedger: DemoLedgerEntry[];
 
   constructor() {
     this.games = new Map();
@@ -111,6 +118,8 @@ export class MemStorage implements IStorage {
     this.platformSettings = initialPlatformSettings() as PlatformSettings;
     this.complianceGates = new Map(initialComplianceGates().map((gate) => [gate.key, gate as ComplianceGate]));
     this.operatorAuditLogs = [];
+    this.demoWallets = new Map();
+    this.demoLedger = [];
     
     this.seedGames();
   }
@@ -380,6 +389,8 @@ export class MemStorage implements IStorage {
       status: 'pending',
       payout: null,
       resultId: null,
+      isDemo: insertBet.isDemo ?? false,
+      demoSessionId: insertBet.demoSessionId ?? null,
       createdAt: new Date(),
     };
     this.bets.set(id, bet);
@@ -407,9 +418,9 @@ export class MemStorage implements IStorage {
     return results[0];
   }
 
-  async getFirstResultAfter(gameId: string, after: Date): Promise<Result | undefined> {
+  async getFirstResultAfter(gameId: string, after: Date, isDemo = false): Promise<Result | undefined> {
     return Array.from(this.results.values())
-      .filter((result) => result.gameId === gameId && new Date(result.drawDate).getTime() >= after.getTime())
+      .filter((result) => result.gameId === gameId && result.isDemo === isDemo && new Date(result.drawDate).getTime() >= after.getTime())
       .sort((left, right) => new Date(left.drawDate).getTime() - new Date(right.drawDate).getTime())[0];
   }
 
@@ -422,6 +433,7 @@ export class MemStorage implements IStorage {
       winningNumbers: JSON.stringify(insertResult.winningNumbers),
       bonusNumber: insertResult.bonusNumber ?? null,
       odds: JSON.stringify(insertResult.odds),
+      isDemo: insertResult.isDemo ?? false,
     };
     this.results.set(id, result);
     return result;
@@ -699,6 +711,31 @@ export class MemStorage implements IStorage {
     const entry: OperatorAuditLog = { id: randomUUID(), ...log, createdAt: new Date() };
     this.operatorAuditLogs.unshift(entry);
     return entry;
+  }
+
+  async getDemoWallet(sessionId: string): Promise<DemoWallet> {
+    const existing = this.demoWallets.get(sessionId);
+    if (existing) return { ...existing };
+    const wallet: DemoWallet = { sessionId, balance: 0, createdAt: new Date(), updatedAt: new Date() };
+    this.demoWallets.set(sessionId, wallet);
+    return { ...wallet };
+  }
+
+  async adjustDemoWallet(sessionId: string, amount: number, type: string, reference?: string): Promise<DemoWallet | undefined> {
+    const wallet = await this.getDemoWallet(sessionId);
+    const balance = Math.round((wallet.balance + amount) * 100) / 100;
+    if (balance < 0 || balance > 1_000_000) return undefined;
+    const updated: DemoWallet = { ...wallet, balance, updatedAt: new Date() };
+    this.demoWallets.set(sessionId, updated);
+    this.demoLedger.unshift({
+      id: randomUUID(), sessionId, type, amount, balanceAfter: balance,
+      reference: reference ?? null, createdAt: new Date(),
+    });
+    return { ...updated };
+  }
+
+  async getDemoLedger(sessionId: string): Promise<DemoLedgerEntry[]> {
+    return this.demoLedger.filter((entry) => entry.sessionId === sessionId).slice(0, 50);
   }
 }
 

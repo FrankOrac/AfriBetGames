@@ -50,12 +50,47 @@ export async function registerRoutes(app: Express): Promise<void> {
     return true;
   };
 
+  const getDemoSessionId = (req: Request): string | undefined => {
+    const value = req.get("x-demo-session-id")?.trim();
+    return value && z.string().uuid().safeParse(value).success ? value : undefined;
+  };
+
   app.get("/api/capabilities", async (_req, res) => {
     try {
       const { capabilities } = await getControlState();
       res.json(capabilities);
     } catch {
       res.status(503).json({ error: "Platform controls are unavailable" });
+    }
+  });
+
+  app.get("/api/demo/wallet", async (req, res) => {
+    try {
+      const { capabilities } = await getControlState();
+      if (!capabilities.demoModeEnabled) return res.status(404).json({ error: "Demo mode is disabled" });
+      const sessionId = getDemoSessionId(req);
+      if (!sessionId) return res.status(400).json({ error: "A valid demo session is required" });
+      const [wallet, ledger] = await Promise.all([storage.getDemoWallet(sessionId), storage.getDemoLedger(sessionId)]);
+      res.setHeader("Cache-Control", "no-store, private");
+      res.json({ wallet, ledger, currency: "DEMO NGN", withdrawable: false });
+    } catch {
+      res.status(500).json({ error: "Failed to load demo wallet" });
+    }
+  });
+
+  app.post("/api/demo/wallet/top-up", async (req, res) => {
+    try {
+      const { capabilities } = await getControlState();
+      if (!capabilities.demoModeEnabled) return res.status(404).json({ error: "Demo mode is disabled" });
+      const sessionId = getDemoSessionId(req);
+      if (!sessionId) return res.status(400).json({ error: "A valid demo session is required" });
+      const { amount } = z.object({ amount: z.number().int().min(1_000).max(100_000) }).strict().parse(req.body);
+      const wallet = await storage.adjustDemoWallet(sessionId, amount, "top_up");
+      if (!wallet) return res.status(409).json({ error: "Demo balance cannot exceed ₦1,000,000" });
+      res.json({ wallet, currency: "DEMO NGN", withdrawable: false });
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ error: "Invalid demo top-up", details: error.issues });
+      res.status(500).json({ error: "Failed to add demo funds" });
     }
   });
   
@@ -86,7 +121,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/bets", async (req, res) => {
     try {
       const { capabilities } = await getControlState();
-      if (!capabilities.bettingEnabled) {
+      const isDemo = !capabilities.bettingEnabled && capabilities.demoModeEnabled;
+      if (!capabilities.bettingEnabled && !isDemo) {
         return res.status(503).json({ error: "Bet placement is disabled until production compliance checks are complete" });
       }
       const validatedBet = insertBetSchema.parse(req.body);
@@ -102,8 +138,10 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ error: "Invalid bet", details: gameValidation.errors });
       }
 
-      // Record stake for daily tracking
-      gameLogic.recordStake(gameValidation.value.stakeAmount);
+      const demoSessionId = isDemo ? getDemoSessionId(req) : undefined;
+      if (isDemo && !demoSessionId) return res.status(400).json({ error: "A valid demo session is required" });
+
+      if (!isDemo) gameLogic.recordStake(gameValidation.value.stakeAmount);
 
       // Calculate theoretical maximum winning with house edge (independent of daily limits)
       const baseMaxWinning = validatedBet.selectedNumbers.length === game.numbersToSelect
@@ -115,10 +153,23 @@ export async function registerRoutes(app: Express): Promise<void> {
         gameLogic.getConfig().maxSingleWinMultiplier * gameValidation.value.stakeAmount,
       );
 
-      const bet = await storage.createBet({
-        ...gameValidation.value,
-        potentialWinning: Math.round(theoreticalMaxWinning * 100) / 100,
-      });
+      if (isDemo) {
+        const wallet = await storage.adjustDemoWallet(demoSessionId!, -gameValidation.value.stakeAmount, "stake");
+        if (!wallet) return res.status(409).json({ error: "Insufficient demo balance. Add demo funds and try again." });
+      }
+
+      let bet;
+      try {
+        bet = await storage.createBet({
+          ...gameValidation.value,
+          potentialWinning: Math.round(theoreticalMaxWinning * 100) / 100,
+          isDemo,
+          demoSessionId: demoSessionId ?? null,
+        });
+      } catch (error) {
+        if (isDemo) await storage.adjustDemoWallet(demoSessionId!, gameValidation.value.stakeAmount, "refund");
+        throw error;
+      }
       
       res.status(201).json(bet);
     } catch (error) {
@@ -196,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/results", async (_req, res) => {
     try {
       const results = await storage.getAllResults();
-      res.json(results);
+      res.json(results.filter((result) => !result.isDemo));
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch results" });
     }
@@ -206,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/results/game/:gameId", async (req, res) => {
     try {
       const results = await storage.getResultsByGame(req.params.gameId);
-      res.json(results);
+      res.json(results.filter((result) => !result.isDemo));
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch results" });
     }
@@ -215,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Get latest result for a game
   app.get("/api/results/game/:gameId/latest", async (req, res) => {
     try {
-      const result = await storage.getLatestResult(req.params.gameId);
+      const result = (await storage.getResultsByGame(req.params.gameId)).find((item) => !item.isDemo);
       if (!result) {
         return res.status(404).json({ error: "No results found for this game" });
       }
@@ -234,7 +285,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
 
       // Only a draw published after the bet was accepted can settle it.
-      const result = await storage.getFirstResultAfter(bet.gameId, new Date(bet.createdAt));
+      const result = await storage.getFirstResultAfter(bet.gameId, new Date(bet.createdAt), bet.isDemo);
       if (!result) {
         return res.status(404).json({ error: "No results available for this game yet" });
       }
@@ -331,7 +382,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         limitApplied = singleWinCapApplied || dailyCapApplied;
 
         // Record payout for daily tracking (even if zero)
-        if (winningAmount > 0) {
+        if (winningAmount > 0 && !bet.isDemo) {
           gameLogic.recordPayout(winningAmount);
         }
 
@@ -345,6 +396,9 @@ export async function registerRoutes(app: Express): Promise<void> {
 
         // Update bet outcome with win status and payout
         await storage.updateBetOutcome(bet.id, 'won', winningAmount, result.id);
+        if (bet.isDemo && bet.demoSessionId && winningAmount > 0) {
+          await storage.adjustDemoWallet(bet.demoSessionId, winningAmount, "winning", bet.id);
+        }
 
         // Provide clear messaging based on which caps apply
         let message = undefined;
@@ -406,7 +460,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Generate random result for a game (for demo purposes)
   app.post("/api/results/generate/:gameId", requireAdmin, async (req, res) => {
     try {
-      if (!demoDrawsEnabled) {
+      const { capabilities } = await getControlState();
+      if (!demoDrawsEnabled && !capabilities.demoModeEnabled) {
         return res.status(403).json({ error: "Demo draw generation is disabled" });
       }
       const game = await storage.getGame(req.params.gameId);
@@ -442,6 +497,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         winningNumbers,
         bonusNumber,
         odds,
+        isDemo: true,
       });
 
       res.status(201).json(result);
@@ -580,6 +636,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       const ticket = {
         ticketId: bet.id,
+        isDemo: bet.isDemo,
         gameName: game.name,
         gameType: game.type,
         selectedNumbers: JSON.parse(bet.selectedNumbers),
@@ -853,16 +910,23 @@ export async function registerRoutes(app: Express): Promise<void> {
         storage.getAllGames(),
         storage.getOperatorAuditLogs(),
       ]);
+      const realBets = bets.filter((bet) => !bet.isDemo);
+      const demoBets = bets.filter((bet) => bet.isDemo);
+      const realBetIds = new Set(realBets.map((bet) => bet.id));
+      const demoBetIds = new Set(demoBets.map((bet) => bet.id));
       res.setHeader("Cache-Control", "no-store, private");
       res.json({
         ...control,
         metrics: {
-          totalBets: bets.length,
-          pendingBets: bets.filter((bet) => bet.status === "pending").length,
-          totalStaked: bets.reduce((sum, bet) => sum + bet.stakeAmount, 0),
-          totalPaid: winnings.reduce((sum, winning) => sum + winning.winningAmount, 0),
-          publishedResults: results.length,
+          totalBets: realBets.length,
+          pendingBets: realBets.filter((bet) => bet.status === "pending").length,
+          totalStaked: realBets.reduce((sum, bet) => sum + bet.stakeAmount, 0),
+          totalPaid: winnings.filter((winning) => realBetIds.has(winning.betId)).reduce((sum, winning) => sum + winning.winningAmount, 0),
+          publishedResults: results.filter((result) => !result.isDemo).length,
           openInquiries: inquiries.filter((inquiry) => inquiry.status === "new").length,
+          demoBets: demoBets.length,
+          demoStaked: demoBets.reduce((sum, bet) => sum + bet.stakeAmount, 0),
+          demoPaid: winnings.filter((winning) => demoBetIds.has(winning.betId)).reduce((sum, winning) => sum + winning.winningAmount, 0),
         },
         games,
         recentBets: bets.slice(0, 10),
@@ -883,6 +947,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         communityPostingEnabled: z.boolean().optional(),
         contactSubmissionsEnabled: z.boolean().optional(),
         maintenanceMode: z.boolean().optional(),
+        demoModeEnabled: z.boolean().optional(),
       }).strict().refine((value) => Object.keys(value).length > 0, "At least one feature must be supplied").parse(req.body);
 
       const control = await getControlState();
@@ -891,6 +956,12 @@ export async function registerRoutes(app: Express): Promise<void> {
           error: "Betting cannot be enabled until every launch gate is complete",
           blockers: control.launchBlockers,
         });
+      }
+      if (update.bettingEnabled === true && control.settings.demoModeEnabled) {
+        return res.status(409).json({ error: "Disable demo mode before enabling real-money betting" });
+      }
+      if (update.demoModeEnabled === true && control.settings.bettingEnabled) {
+        return res.status(409).json({ error: "Disable real-money betting before enabling demo mode" });
       }
       if (update.communityPostingEnabled === true) {
         const required = ["community_safety", "player_identity"];

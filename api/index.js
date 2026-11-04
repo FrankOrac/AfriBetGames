@@ -146,6 +146,8 @@ var bets = pgTable("bets", {
   status: text("status").notNull().default("pending"),
   payout: numeric("payout", { precision: 14, scale: 2, mode: "number" }),
   resultId: varchar("result_id"),
+  isDemo: boolean("is_demo").notNull().default(false),
+  demoSessionId: varchar("demo_session_id"),
   createdAt: timestamp("created_at").notNull().defaultNow()
 }, (table) => [
   index("bets_game_id_idx").on(table.gameId),
@@ -163,7 +165,8 @@ var results = pgTable("results", {
   drawDate: timestamp("draw_date").notNull(),
   winningNumbers: text("winning_numbers").notNull(),
   bonusNumber: integer("bonus_number"),
-  odds: text("odds").notNull()
+  odds: text("odds").notNull(),
+  isDemo: boolean("is_demo").notNull().default(false)
 }, (table) => [
   index("results_game_draw_idx").on(table.gameId, table.drawDate)
 ]);
@@ -172,7 +175,8 @@ var insertResultSchema = z.object({
   drawDate: z.coerce.date(),
   winningNumbers: z.array(z.number().int()).min(1).max(10),
   bonusNumber: z.number().int().optional(),
-  odds: z.array(z.number().finite().positive()).min(1).max(10)
+  odds: z.array(z.number().finite().positive()).min(1).max(10),
+  isDemo: z.boolean().optional()
 }).strict();
 var winnings = pgTable("winnings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -300,6 +304,7 @@ var platformSettings = pgTable("platform_settings", {
   communityPostingEnabled: boolean("community_posting_enabled").notNull().default(false),
   contactSubmissionsEnabled: boolean("contact_submissions_enabled").notNull().default(false),
   maintenanceMode: boolean("maintenance_mode").notNull().default(false),
+  demoModeEnabled: boolean("demo_mode_enabled").notNull().default(false),
   houseEdgePercentage: numeric("house_edge_percentage", { precision: 5, scale: 2, mode: "number" }).notNull().default(15),
   maxDailyPayoutRatio: numeric("max_daily_payout_ratio", { precision: 5, scale: 4, mode: "number" }).notNull().default(0.75),
   maxSingleWinMultiplier: numeric("max_single_win_multiplier", { precision: 12, scale: 2, mode: "number" }).notNull().default(1e3),
@@ -333,6 +338,23 @@ var insertOperatorAuditLogSchema = createInsertSchema(operatorAuditLogs).omit({
   id: true,
   createdAt: true
 });
+var demoWallets = pgTable("demo_wallets", {
+  sessionId: varchar("session_id").primaryKey(),
+  balance: numeric("balance", { precision: 14, scale: 2, mode: "number" }).notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+var demoLedger = pgTable("demo_ledger", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => demoWallets.sessionId, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  amount: numeric("amount", { precision: 14, scale: 2, mode: "number" }).notNull(),
+  balanceAfter: numeric("balance_after", { precision: 14, scale: 2, mode: "number" }).notNull(),
+  reference: text("reference"),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+}, (table) => [
+  index("demo_ledger_session_created_idx").on(table.sessionId, table.createdAt)
+]);
 
 // server/control-plane.ts
 var PLATFORM_SETTINGS_ID = "global";
@@ -411,6 +433,7 @@ function initialPlatformSettings() {
     communityPostingEnabled: process.env.COMMUNITY_POSTING_ENABLED === "true" && process.env.NODE_ENV !== "production",
     contactSubmissionsEnabled: process.env.PUBLIC_PREVIEW_MODE !== "true" && process.env.NODE_ENV !== "production",
     maintenanceMode: false,
+    demoModeEnabled: false,
     houseEdgePercentage: Number(process.env.HOUSE_EDGE_PERCENTAGE ?? 15),
     maxDailyPayoutRatio: Number(process.env.MAX_DAILY_PAYOUT_RATIO ?? 0.75),
     maxSingleWinMultiplier: Number(process.env.MAX_SINGLE_WIN_MULTIPLIER ?? 1e3),
@@ -452,6 +475,7 @@ function operationalCapabilities(settings, gates, infrastructure) {
   const communityReady = gates.some((gate) => gate.key === "community_safety" && gate.status === "complete") && gates.some((gate) => gate.key === "player_identity" && gate.status === "complete");
   return {
     bettingEnabled: !maintenanceMode && allLaunchGatesComplete && settings.bettingEnabled,
+    demoModeEnabled: !maintenanceMode && settings.demoModeEnabled,
     communityPostingEnabled: !maintenanceMode && !infrastructure.publicPreviewMode && communityReady && settings.communityPostingEnabled,
     contactSubmissionsEnabled: !maintenanceMode && !infrastructure.publicPreviewMode && settings.contactSubmissionsEnabled,
     // This codebase does not yet contain a payment-provider or audited-ledger implementation.
@@ -521,7 +545,9 @@ var DatabaseStorage = class {
       bonusNumber: bet.bonusNumber ?? null,
       stakeAmount: bet.stakeAmount,
       potentialWinning: bet.potentialWinning ?? null,
-      status: "pending"
+      status: "pending",
+      isDemo: bet.isDemo ?? false,
+      demoSessionId: bet.demoSessionId ?? null
     }).returning())[0];
   }
   async getResult(id) {
@@ -536,15 +562,16 @@ var DatabaseStorage = class {
   async getLatestResult(gameId) {
     return (await this.db.select().from(results).where(eq(results.gameId, gameId)).orderBy(desc(results.drawDate)).limit(1))[0];
   }
-  async getFirstResultAfter(gameId, after) {
-    return (await this.db.select().from(results).where(and(eq(results.gameId, gameId), gte(results.drawDate, after))).orderBy(asc(results.drawDate)).limit(1))[0];
+  async getFirstResultAfter(gameId, after, isDemo = false) {
+    return (await this.db.select().from(results).where(and(eq(results.gameId, gameId), eq(results.isDemo, isDemo), gte(results.drawDate, after))).orderBy(asc(results.drawDate)).limit(1))[0];
   }
   async createResult(result) {
     return (await this.db.insert(results).values({
       ...result,
       winningNumbers: JSON.stringify(result.winningNumbers),
       bonusNumber: result.bonusNumber ?? null,
-      odds: JSON.stringify(result.odds)
+      odds: JSON.stringify(result.odds),
+      isDemo: result.isDemo ?? false
     }).returning())[0];
   }
   async getWinning(id) {
@@ -670,6 +697,28 @@ var DatabaseStorage = class {
     await this.ensureControlPlane();
     return (await this.db.insert(operatorAuditLogs).values(log).returning())[0];
   }
+  async getDemoWallet(sessionId) {
+    await this.db.insert(demoWallets).values({ sessionId, balance: 0 }).onConflictDoNothing({ target: demoWallets.sessionId });
+    return (await this.db.select().from(demoWallets).where(eq(demoWallets.sessionId, sessionId)).limit(1))[0];
+  }
+  async adjustDemoWallet(sessionId, amount, type, reference) {
+    const wallet = await this.getDemoWallet(sessionId);
+    const balance = Math.round((wallet.balance + amount) * 100) / 100;
+    if (balance < 0 || balance > 1e6) return void 0;
+    const updated = (await this.db.update(demoWallets).set({ balance, updatedAt: /* @__PURE__ */ new Date() }).where(and(eq(demoWallets.sessionId, sessionId), eq(demoWallets.balance, wallet.balance))).returning())[0];
+    if (!updated) return void 0;
+    await this.db.insert(demoLedger).values({
+      sessionId,
+      type,
+      amount,
+      balanceAfter: balance,
+      reference: reference ?? null
+    });
+    return updated;
+  }
+  async getDemoLedger(sessionId) {
+    return this.db.select().from(demoLedger).where(eq(demoLedger.sessionId, sessionId)).orderBy(desc(demoLedger.createdAt)).limit(50);
+  }
 };
 
 // server/storage.ts
@@ -686,6 +735,8 @@ var MemStorage = class {
   platformSettings;
   complianceGates;
   operatorAuditLogs;
+  demoWallets;
+  demoLedger;
   constructor() {
     this.games = /* @__PURE__ */ new Map();
     this.bets = /* @__PURE__ */ new Map();
@@ -699,6 +750,8 @@ var MemStorage = class {
     this.platformSettings = initialPlatformSettings();
     this.complianceGates = new Map(initialComplianceGates().map((gate) => [gate.key, gate]));
     this.operatorAuditLogs = [];
+    this.demoWallets = /* @__PURE__ */ new Map();
+    this.demoLedger = [];
     this.seedGames();
   }
   seedGames() {
@@ -759,6 +812,8 @@ var MemStorage = class {
       status: "pending",
       payout: null,
       resultId: null,
+      isDemo: insertBet.isDemo ?? false,
+      demoSessionId: insertBet.demoSessionId ?? null,
       createdAt: /* @__PURE__ */ new Date()
     };
     this.bets.set(id, bet);
@@ -779,8 +834,8 @@ var MemStorage = class {
     const results2 = await this.getResultsByGame(gameId);
     return results2[0];
   }
-  async getFirstResultAfter(gameId, after) {
-    return Array.from(this.results.values()).filter((result) => result.gameId === gameId && new Date(result.drawDate).getTime() >= after.getTime()).sort((left, right) => new Date(left.drawDate).getTime() - new Date(right.drawDate).getTime())[0];
+  async getFirstResultAfter(gameId, after, isDemo = false) {
+    return Array.from(this.results.values()).filter((result) => result.gameId === gameId && result.isDemo === isDemo && new Date(result.drawDate).getTime() >= after.getTime()).sort((left, right) => new Date(left.drawDate).getTime() - new Date(right.drawDate).getTime())[0];
   }
   async createResult(insertResult) {
     const id = randomUUID();
@@ -790,7 +845,8 @@ var MemStorage = class {
       drawDate: insertResult.drawDate,
       winningNumbers: JSON.stringify(insertResult.winningNumbers),
       bonusNumber: insertResult.bonusNumber ?? null,
-      odds: JSON.stringify(insertResult.odds)
+      odds: JSON.stringify(insertResult.odds),
+      isDemo: insertResult.isDemo ?? false
     };
     this.results.set(id, result);
     return result;
@@ -1000,6 +1056,33 @@ var MemStorage = class {
     const entry = { id: randomUUID(), ...log, createdAt: /* @__PURE__ */ new Date() };
     this.operatorAuditLogs.unshift(entry);
     return entry;
+  }
+  async getDemoWallet(sessionId) {
+    const existing = this.demoWallets.get(sessionId);
+    if (existing) return { ...existing };
+    const wallet = { sessionId, balance: 0, createdAt: /* @__PURE__ */ new Date(), updatedAt: /* @__PURE__ */ new Date() };
+    this.demoWallets.set(sessionId, wallet);
+    return { ...wallet };
+  }
+  async adjustDemoWallet(sessionId, amount, type, reference) {
+    const wallet = await this.getDemoWallet(sessionId);
+    const balance = Math.round((wallet.balance + amount) * 100) / 100;
+    if (balance < 0 || balance > 1e6) return void 0;
+    const updated = { ...wallet, balance, updatedAt: /* @__PURE__ */ new Date() };
+    this.demoWallets.set(sessionId, updated);
+    this.demoLedger.unshift({
+      id: randomUUID(),
+      sessionId,
+      type,
+      amount,
+      balanceAfter: balance,
+      reference: reference ?? null,
+      createdAt: /* @__PURE__ */ new Date()
+    });
+    return { ...updated };
+  }
+  async getDemoLedger(sessionId) {
+    return this.demoLedger.filter((entry) => entry.sessionId === sessionId).slice(0, 50);
   }
 };
 function createStorage() {
@@ -1247,12 +1330,44 @@ async function registerRoutes(app) {
     }
     return true;
   };
+  const getDemoSessionId = (req) => {
+    const value = req.get("x-demo-session-id")?.trim();
+    return value && z2.string().uuid().safeParse(value).success ? value : void 0;
+  };
   app.get("/api/capabilities", async (_req, res) => {
     try {
       const { capabilities } = await getControlState();
       res.json(capabilities);
     } catch {
       res.status(503).json({ error: "Platform controls are unavailable" });
+    }
+  });
+  app.get("/api/demo/wallet", async (req, res) => {
+    try {
+      const { capabilities } = await getControlState();
+      if (!capabilities.demoModeEnabled) return res.status(404).json({ error: "Demo mode is disabled" });
+      const sessionId = getDemoSessionId(req);
+      if (!sessionId) return res.status(400).json({ error: "A valid demo session is required" });
+      const [wallet, ledger] = await Promise.all([storage.getDemoWallet(sessionId), storage.getDemoLedger(sessionId)]);
+      res.setHeader("Cache-Control", "no-store, private");
+      res.json({ wallet, ledger, currency: "DEMO NGN", withdrawable: false });
+    } catch {
+      res.status(500).json({ error: "Failed to load demo wallet" });
+    }
+  });
+  app.post("/api/demo/wallet/top-up", async (req, res) => {
+    try {
+      const { capabilities } = await getControlState();
+      if (!capabilities.demoModeEnabled) return res.status(404).json({ error: "Demo mode is disabled" });
+      const sessionId = getDemoSessionId(req);
+      if (!sessionId) return res.status(400).json({ error: "A valid demo session is required" });
+      const { amount } = z2.object({ amount: z2.number().int().min(1e3).max(1e5) }).strict().parse(req.body);
+      const wallet = await storage.adjustDemoWallet(sessionId, amount, "top_up");
+      if (!wallet) return res.status(409).json({ error: "Demo balance cannot exceed \u20A61,000,000" });
+      res.json({ wallet, currency: "DEMO NGN", withdrawable: false });
+    } catch (error) {
+      if (error instanceof z2.ZodError) return res.status(400).json({ error: "Invalid demo top-up", details: error.issues });
+      res.status(500).json({ error: "Failed to add demo funds" });
     }
   });
   app.get("/api/games", async (_req, res) => {
@@ -1277,7 +1392,8 @@ async function registerRoutes(app) {
   app.post("/api/bets", async (req, res) => {
     try {
       const { capabilities } = await getControlState();
-      if (!capabilities.bettingEnabled) {
+      const isDemo = !capabilities.bettingEnabled && capabilities.demoModeEnabled;
+      if (!capabilities.bettingEnabled && !isDemo) {
         return res.status(503).json({ error: "Bet placement is disabled until production compliance checks are complete" });
       }
       const validatedBet = insertBetSchema.parse(req.body);
@@ -1289,16 +1405,30 @@ async function registerRoutes(app) {
       if (!gameValidation.ok) {
         return res.status(400).json({ error: "Invalid bet", details: gameValidation.errors });
       }
-      gameLogic.recordStake(gameValidation.value.stakeAmount);
+      const demoSessionId = isDemo ? getDemoSessionId(req) : void 0;
+      if (isDemo && !demoSessionId) return res.status(400).json({ error: "A valid demo session is required" });
+      if (!isDemo) gameLogic.recordStake(gameValidation.value.stakeAmount);
       const baseMaxWinning = validatedBet.selectedNumbers.length === game.numbersToSelect ? Math.pow(game.maxOdds, game.minMatches) * gameValidation.value.stakeAmount : gameValidation.value.stakeAmount;
       const theoreticalMaxWinning = Math.min(
         baseMaxWinning,
         gameLogic.getConfig().maxSingleWinMultiplier * gameValidation.value.stakeAmount
       );
-      const bet = await storage.createBet({
-        ...gameValidation.value,
-        potentialWinning: Math.round(theoreticalMaxWinning * 100) / 100
-      });
+      if (isDemo) {
+        const wallet = await storage.adjustDemoWallet(demoSessionId, -gameValidation.value.stakeAmount, "stake");
+        if (!wallet) return res.status(409).json({ error: "Insufficient demo balance. Add demo funds and try again." });
+      }
+      let bet;
+      try {
+        bet = await storage.createBet({
+          ...gameValidation.value,
+          potentialWinning: Math.round(theoreticalMaxWinning * 100) / 100,
+          isDemo,
+          demoSessionId: demoSessionId ?? null
+        });
+      } catch (error) {
+        if (isDemo) await storage.adjustDemoWallet(demoSessionId, gameValidation.value.stakeAmount, "refund");
+        throw error;
+      }
       res.status(201).json(bet);
     } catch (error) {
       if (error instanceof Error && "issues" in error) {
@@ -1362,7 +1492,7 @@ async function registerRoutes(app) {
   app.get("/api/results", async (_req, res) => {
     try {
       const results2 = await storage.getAllResults();
-      res.json(results2);
+      res.json(results2.filter((result) => !result.isDemo));
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch results" });
     }
@@ -1370,14 +1500,14 @@ async function registerRoutes(app) {
   app.get("/api/results/game/:gameId", async (req, res) => {
     try {
       const results2 = await storage.getResultsByGame(req.params.gameId);
-      res.json(results2);
+      res.json(results2.filter((result) => !result.isDemo));
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch results" });
     }
   });
   app.get("/api/results/game/:gameId/latest", async (req, res) => {
     try {
-      const result = await storage.getLatestResult(req.params.gameId);
+      const result = (await storage.getResultsByGame(req.params.gameId)).find((item) => !item.isDemo);
       if (!result) {
         return res.status(404).json({ error: "No results found for this game" });
       }
@@ -1392,7 +1522,7 @@ async function registerRoutes(app) {
       if (!bet) {
         return res.status(404).json({ error: "Bet not found" });
       }
-      const result = await storage.getFirstResultAfter(bet.gameId, new Date(bet.createdAt));
+      const result = await storage.getFirstResultAfter(bet.gameId, new Date(bet.createdAt), bet.isDemo);
       if (!result) {
         return res.status(404).json({ error: "No results available for this game yet" });
       }
@@ -1461,7 +1591,7 @@ async function registerRoutes(app) {
         const singleWinCapApplied = winningResult.metadata.singleWinCapApplied;
         const dailyCapApplied = winningResult.metadata.dailyCapApplied;
         limitApplied = singleWinCapApplied || dailyCapApplied;
-        if (winningAmount > 0) {
+        if (winningAmount > 0 && !bet.isDemo) {
           gameLogic.recordPayout(winningAmount);
         }
         const winning = await storage.createWinning({
@@ -1472,6 +1602,9 @@ async function registerRoutes(app) {
           winningAmount
         });
         await storage.updateBetOutcome(bet.id, "won", winningAmount, result.id);
+        if (bet.isDemo && bet.demoSessionId && winningAmount > 0) {
+          await storage.adjustDemoWallet(bet.demoSessionId, winningAmount, "winning", bet.id);
+        }
         let message = void 0;
         if (singleWinCapApplied && dailyCapApplied) {
           if (winningAmount === 0) {
@@ -1523,7 +1656,8 @@ async function registerRoutes(app) {
   });
   app.post("/api/results/generate/:gameId", requireAdmin, async (req, res) => {
     try {
-      if (!demoDrawsEnabled) {
+      const { capabilities } = await getControlState();
+      if (!demoDrawsEnabled && !capabilities.demoModeEnabled) {
         return res.status(403).json({ error: "Demo draw generation is disabled" });
       }
       const game = await storage.getGame(req.params.gameId);
@@ -1551,7 +1685,8 @@ async function registerRoutes(app) {
         drawDate: /* @__PURE__ */ new Date(),
         winningNumbers,
         bonusNumber,
-        odds
+        odds,
+        isDemo: true
       });
       res.status(201).json(result);
     } catch (error) {
@@ -1666,6 +1801,7 @@ async function registerRoutes(app) {
       }
       const ticket = {
         ticketId: bet.id,
+        isDemo: bet.isDemo,
         gameName: game.name,
         gameType: game.type,
         selectedNumbers: JSON.parse(bet.selectedNumbers),
@@ -1895,16 +2031,23 @@ async function registerRoutes(app) {
         storage.getAllGames(),
         storage.getOperatorAuditLogs()
       ]);
+      const realBets = bets2.filter((bet) => !bet.isDemo);
+      const demoBets = bets2.filter((bet) => bet.isDemo);
+      const realBetIds = new Set(realBets.map((bet) => bet.id));
+      const demoBetIds = new Set(demoBets.map((bet) => bet.id));
       res.setHeader("Cache-Control", "no-store, private");
       res.json({
         ...control,
         metrics: {
-          totalBets: bets2.length,
-          pendingBets: bets2.filter((bet) => bet.status === "pending").length,
-          totalStaked: bets2.reduce((sum, bet) => sum + bet.stakeAmount, 0),
-          totalPaid: winnings2.reduce((sum, winning) => sum + winning.winningAmount, 0),
-          publishedResults: results2.length,
-          openInquiries: inquiries.filter((inquiry) => inquiry.status === "new").length
+          totalBets: realBets.length,
+          pendingBets: realBets.filter((bet) => bet.status === "pending").length,
+          totalStaked: realBets.reduce((sum, bet) => sum + bet.stakeAmount, 0),
+          totalPaid: winnings2.filter((winning) => realBetIds.has(winning.betId)).reduce((sum, winning) => sum + winning.winningAmount, 0),
+          publishedResults: results2.filter((result) => !result.isDemo).length,
+          openInquiries: inquiries.filter((inquiry) => inquiry.status === "new").length,
+          demoBets: demoBets.length,
+          demoStaked: demoBets.reduce((sum, bet) => sum + bet.stakeAmount, 0),
+          demoPaid: winnings2.filter((winning) => demoBetIds.has(winning.betId)).reduce((sum, winning) => sum + winning.winningAmount, 0)
         },
         games: games2,
         recentBets: bets2.slice(0, 10),
@@ -1923,7 +2066,8 @@ async function registerRoutes(app) {
         bettingEnabled: z2.boolean().optional(),
         communityPostingEnabled: z2.boolean().optional(),
         contactSubmissionsEnabled: z2.boolean().optional(),
-        maintenanceMode: z2.boolean().optional()
+        maintenanceMode: z2.boolean().optional(),
+        demoModeEnabled: z2.boolean().optional()
       }).strict().refine((value) => Object.keys(value).length > 0, "At least one feature must be supplied").parse(req.body);
       const control = await getControlState();
       if (update.bettingEnabled === true && control.launchBlockers.length > 0) {
@@ -1931,6 +2075,12 @@ async function registerRoutes(app) {
           error: "Betting cannot be enabled until every launch gate is complete",
           blockers: control.launchBlockers
         });
+      }
+      if (update.bettingEnabled === true && control.settings.demoModeEnabled) {
+        return res.status(409).json({ error: "Disable demo mode before enabling real-money betting" });
+      }
+      if (update.demoModeEnabled === true && control.settings.bettingEnabled) {
+        return res.status(409).json({ error: "Disable real-money betting before enabling demo mode" });
       }
       if (update.communityPostingEnabled === true) {
         const required = ["community_safety", "player_identity"];
@@ -2006,7 +2156,7 @@ function corsMiddleware() {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Admin-Key,X-Admin-Actor,X-Request-Id");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Admin-Key,X-Admin-Actor,X-Demo-Session-Id,X-Request-Id");
     res.setHeader("Access-Control-Allow-Credentials", "true");
     if (req.method === "OPTIONS") {
       res.status(204).end();

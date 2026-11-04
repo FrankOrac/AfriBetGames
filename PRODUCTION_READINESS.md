@@ -50,6 +50,13 @@ codes, operational metrics, inquiries, and an operator audit trail. Runtime
 changes require PostgreSQL and are rejected while `PUBLIC_PREVIEW_MODE=true`.
 Bet placement cannot become active until every launch gate is complete.
 
+The operator can independently enable the **Demo sandbox** before those gates
+are complete. Demo mode uses browser-scoped test wallets, test-only ledger
+entries, demo-tagged bets and demo-tagged draws. Demo credits have no cash
+value and cannot be deposited, transferred or withdrawn. Demo activity is
+excluded from real-money metrics and public official results. Demo mode and
+real-money betting are mutually exclusive, and maintenance mode disables both.
+
 ## Data model notes
 
 - Money is stored as PostgreSQL `numeric(14,2)` rather than floating-point `real`.
